@@ -5,6 +5,9 @@
     "env": {
         "node": true
     },
+    "parserOptions": {
+        "sourceType": "module"
+    },
     "overrides": [
         {
             "files": ["src/*.spec.js", "src/**/*.spec.js"],

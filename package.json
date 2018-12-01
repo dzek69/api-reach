@@ -1,9 +1,10 @@
 {
   "name": "api-reach",
-  "version": "0.0.1-unreleased.1",
+  "version": "0.0.1-alpha.1",
   "repository": "https://github.com/dzek69/api-reach.git",
   "author": "Jacek Nowacki @dzek69 <git-public@dzek.eu>",
   "license": "MIT",
+  "main": "src/index.mjs",
   "scripts": {
     "test": "cross-env NODE_ENV=testing mocha 'src/**/*.spec.js'",
     "docs": "node build-scripts/docs && jsdoc src README.md -t node_modules/docdash -d ./docs -u ./tutorials && node build-scripts/docs.after",
@@ -27,6 +28,14 @@
     "fs-extra": "^7.0.1",
     "jsdoc": "^3.5.5",
     "mocha": "^5.2.0",
-    "must": "^0.13.4"
+    "must": "^0.13.4",
+    "node-fetch": "^2.3.0"
+  },
+  "dependencies": {
+    "better-custom-error": "^1.0.0",
+    "light-isomorphic-fetch": "^1.0.0"
+  },
+  "peerDependencies": {
+    "node-fetch": "^2.3.0"
   }
 }
