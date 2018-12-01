@@ -1,5 +1,5 @@
 import ce from "better-custom-error/dist";
-const createError = ce.default;
+const createError = ce.default || ce; // to let it work as bare es modules and common js with babel
 
 const HttpError = createError("HttpError");
 const ClientHttpError = createError("ClientHttpError", HttpError);
