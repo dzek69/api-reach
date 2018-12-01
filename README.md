@@ -4,7 +4,32 @@ JavaScript universal API Client that is easy, just-works and is feature rich/plu
 
 ## Features
 
-- @TODO but it's better than others 😎
+- features list is @TODO but it's better than others 😎
+
+## TODO
+
+### Important
+
+- allow aborting requests
+- timeout support
+- add cache support
+
+### Less important
+
+- add files upload support
+- add binary support
+- handle multiple same header
+- handle same header, different letters case
+- if using url with query params and object query params - merge them
+- add abort container wrapper, that will abort all requests in it (useful for stopping stuff for websites) [?]
+
+### Almost not important
+
+- code cleanup (eliminate hardcoded values)
+- allow injecting qs methods
+- handle >= 600 statuses as unknown status
+- do not pass unknown options to `fetch`
+- handle unknown options (incorrect type)
 
 ## License
 
