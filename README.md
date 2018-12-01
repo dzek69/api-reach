@@ -16,6 +16,7 @@ JavaScript universal API Client that is easy, just-works and is feature rich/plu
 
 ### Less important
 
+- cookie jar support
 - add files upload support
 - add binary support
 - handle multiple same header
