@@ -33,7 +33,8 @@
   },
   "dependencies": {
     "better-custom-error": "^1.0.0",
-    "light-isomorphic-fetch": "^1.0.0"
+    "light-isomorphic-fetch": "^1.0.0",
+    "qs": "^6.6.0"
   },
   "peerDependencies": {
     "node-fetch": "^2.3.0"

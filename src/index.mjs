@@ -1,4 +1,7 @@
 import fetch from "node-fetch";
+import qs from "qs";
+const stringify = qs.stringify;
+
 import { ClientHttpError, ServerHttpError, ResponseDataTypeMismatchError } from "./errors";
 import createResponse from "./response";
 import { isServerError, isClientError } from "./response/matchStatus";
@@ -59,7 +62,7 @@ class ApiClient {
             if (typeof body === "string") {
                 return body;
             }
-            return ""; // @todo serialize body
+            return stringify(body);
         }
         return ""; // @todo throw?
     }
@@ -87,6 +90,17 @@ class ApiClient {
         };
     }
 
+    _buildUrl(originalUrl, queryParams) {
+        if (!queryParams) {
+            return originalUrl;
+        }
+        const hasQS = originalUrl.includes("?");
+        const appendChar = hasQS ? "&" : "?";
+        // @todo extract existing query params from string and include for stringify ?
+
+        return originalUrl + appendChar + stringify(queryParams);
+    }
+
     get(url, queryParams, options) {
         return this.request("GET", url, queryParams, null, options);
     }
@@ -97,7 +111,7 @@ class ApiClient {
             method: method.toUpperCase(),
         };
 
-        const url = originalUrl; // @todo use queryParams here to create url
+        const url = this._buildUrl(originalUrl, queryParams);
 
         const request = new Request(url, fetchOptions, originalUrl, queryParams);
 
