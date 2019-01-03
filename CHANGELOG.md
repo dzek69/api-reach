@@ -6,7 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [UNRELEASED]
 (nothing yet)
 
-## [0.0.1-alpha] - 2018-12-01
+## [0.0.1-alpha.2] - 2019-01-03
+### Added
+- base url support
+
+### Fixed
+- eslint not actually linting because of `mjs` extension
+
+## [0.0.1-alpha.1] - 2018-12-01
 ### Added
 - first version with working basics
 

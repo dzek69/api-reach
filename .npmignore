@@ -3,6 +3,9 @@
 /test/
 /dist/**/*.spec.js
 
+test.js
+test.mjs
+
 /.babelrc
 /yarn.lock
 /*.tgz

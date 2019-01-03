@@ -1,5 +1,6 @@
 import fetch from "node-fetch";
 import qs from "qs";
+import urlJoin from "url-join";
 const stringify = qs.stringify;
 
 import { ClientHttpError, ServerHttpError, ResponseDataTypeMismatchError } from "./errors";
@@ -32,6 +33,15 @@ const contentTypeMap = {
 //     "referrer",
 //     "body",
 // ];
+
+const safeUrlParse = (url) => {
+    try {
+        return new URL(url);
+    }
+    catch (e) { // eslint-disable-line no-unused-vars
+        return null;
+    }
+};
 
 /**
  * @class ApiClient
@@ -90,15 +100,30 @@ class ApiClient {
         };
     }
 
-    _buildUrl(originalUrl, queryParams) {
-        if (!queryParams) {
-            return originalUrl;
+    _buildUrlBase(url, base) {
+        const parsedBase = safeUrlParse(base);
+        if (!parsedBase || !parsedBase.host) { // @todo throw an Error ?
+            return url;
         }
-        const hasQS = originalUrl.includes("?");
+
+        const parsedUrl = safeUrlParse(url);
+        if (parsedUrl && parsedUrl.base) { // base is valid full url and given url is also full url
+            throw new Error("Cannot use absolute url with base url."); // @todo throw custom type?
+        }
+
+        return urlJoin(base, url);
+    }
+
+    _buildUrl(originalUrl, queryParams, fetchOptions) {
+        const url = this._buildUrlBase(originalUrl, fetchOptions.base);
+        if (!queryParams) {
+            return url;
+        }
+        const hasQS = url.includes("?");
         const appendChar = hasQS ? "&" : "?";
         // @todo extract existing query params from string and include for stringify ?
 
-        return originalUrl + appendChar + stringify(queryParams);
+        return url + appendChar + stringify(queryParams);
     }
 
     get(url, queryParams, options) {
@@ -111,7 +136,7 @@ class ApiClient {
             method: method.toUpperCase(),
         };
 
-        const url = this._buildUrl(originalUrl, queryParams);
+        const url = this._buildUrl(originalUrl, queryParams, fetchOptions);
 
         const request = new Request(url, fetchOptions, originalUrl, queryParams);
 
