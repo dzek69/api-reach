@@ -33,10 +33,11 @@ const contentTypeMap = {
 //     "referrer",
 //     "body",
 // ];
+let URLParser = URL;
 
 const safeUrlParse = (url) => {
     try {
-        return new URL(url);
+        return new URLParser(url);
     }
     catch (e) { // eslint-disable-line no-unused-vars
         return null;
@@ -165,5 +166,8 @@ class ApiClient {
         return response;
     }
 }
+ApiClient.configure = options => {
+    URLParser = options.URL;
+};
 
 export default ApiClient;

@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [UNRELEASED]
 (nothing yet)
 
+## [0.0.1-alpha.3] - 2019-01-03
+### Added
+- support for custom URL parser (to allow polyfills or environments where global URL is already taken by something else,
+like React Native)
+
+### Changed
+- updated eslint config
+
 ## [0.0.1-alpha.2] - 2019-01-03
 ### Added
 - base url support
