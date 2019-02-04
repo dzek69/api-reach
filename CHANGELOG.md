@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [UNRELEASED]
 (nothing yet)
 
+## [0.0.1-alpha.4] - 2019-02-04
+### Added
+- `post`, `patch`, `delete` helpers
+
+### Fixed
+- non-GET request sending
+
 ## [0.0.1-alpha.3] - 2019-01-03
 ### Added
 - support for custom URL parser (to allow polyfills or environments where global URL is already taken by something else,

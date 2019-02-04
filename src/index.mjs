@@ -131,6 +131,18 @@ class ApiClient {
         return this.request("GET", url, queryParams, null, options);
     }
 
+    post(url, queryParams, body, options) {
+        return this.request("POST", url, queryParams, body, options);
+    }
+
+    patch(url, queryParams, body, options) {
+        return this.request("PATCH", url, queryParams, body, options);
+    }
+
+    delete(url, queryParams, body, options) {
+        return this.request("DELETE", url, queryParams, body, options);
+    }
+
     async request(method, originalUrl, queryParams, body, options) {
         const fetchOptions = {
             ...this._buildFetchOptions(options || {}, body),
