@@ -35,6 +35,7 @@
     "abort-controller": "^2.0.2",
     "better-custom-error": "^1.0.0",
     "light-isomorphic-fetch": "^1.0.0",
+    "oop-timers": "^1.0.0",
     "qs": "^6.6.0",
     "url-join": "^4.0.0"
   },

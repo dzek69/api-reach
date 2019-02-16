@@ -2487,6 +2487,11 @@ onetime@^2.0.0:
   resolved "https://registry.yarnpkg.com/oolong/-/oolong-1.15.1.tgz#90bac9e7ce52f60906ab2228d9e2b115f1086cea"
   integrity sha1-kLrJ585S9gkGqyIo2eKxFfEIbOo=
 
+oop-timers@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/oop-timers/-/oop-timers-1.0.0.tgz#90f06f57ddcc8baefec2632463664fe724fec722"
+  integrity sha512-0CSPNVEg4yXRhtZbjS1siIW4cEHxSs52MJAra0HC5YIkINWd7CwHW9yVbYS4fKKW4s5k6tBe4kpRi+J17cfhZA==
+
 optionator@^0.8.2:
   version "0.8.2"
   resolved "https://registry.yarnpkg.com/optionator/-/optionator-0.8.2.tgz#364c5e409d3f4d6301d6c0b4c05bba50180aeb64"

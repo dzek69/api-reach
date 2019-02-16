@@ -1,7 +1,8 @@
-import fetch from "node-fetch";
+import fetch from "node-fetch"; // eslint-disable-line max-lines
 import qs from "qs";
 import urlJoin from "url-join";
 import AbortController from "abort-controller";
+import Timeout from "oop-timers/src/Timeout";
 const stringify = qs.stringify;
 
 import { ClientHttpError, ServerHttpError, ResponseDataTypeMismatchError, AbortedHttpError } from "./errors";
@@ -45,16 +46,17 @@ const safeUrlParse = (url) => {
     }
 };
 
-const globalOptions = {
+const globalOptions = { // eslint-disable-line object-shorthand
     retry: 1,
-    retryInterval: 1000,
+    retryInterval: 100,
     retryPolicy({ count }) {
         return count <= this.retry;
     },
     retryWaitPolicy() {
         return this.retryInterval;
     },
-    timeout: 1,
+    timeout: 30000,
+    totalTimeout: 60000,
 };
 
 const wait = time => new Promise(resolve => setTimeout(resolve, time));
@@ -160,47 +162,93 @@ class ApiClient {
         return this.request("DELETE", url, queryParams, body, options);
     }
 
-    request(method, originalUrl, queryParams, body, options = {}) {
-        const controller = new AbortController();
+    request(method, originalUrl, queryParams, body, options = {}) { // eslint-disable-line max-lines-per-function
+        const start = Date.now();
         const fineOptions = this._buildFetchOptions(options || {}, body);
-        let aborted = false;
+        let currentController,
+            aborted = false,
+            isGlobalTimeouted = false;
 
-        const future = new Promise((resolve, reject) => {
+        const globalBreak = () => {
+            isGlobalTimeouted = true;
+            future.abort(); // eslint-disable-line no-use-before-define
+        };
+
+        const future = new Promise((resolve, reject) => { // eslint-disable-line max-lines-per-function
             let count = 0,
                 lastError = null;
-            return (async () => {
+
+            return (async () => { // eslint-disable-line max-statements, max-lines-per-function
                 while (fineOptions.retryPolicy({ count: ++count })) {
+                    let isTimeouted = false;
+                    currentController = new AbortController();
+                    const singleTimeout = new Timeout(() => { // eslint-disable-line no-loop-func
+                        isTimeouted = true;
+                        currentController.abort();
+                    }, fineOptions.timeout);
                     try {
-                        // @todo calculate total timeout - if longer than already used time + wait time - break before
-                        // waiting
                         if (count > 1) {
-                            await wait(fineOptions.retryWaitPolicy({ count }));
+                            const waitTime = fineOptions.retryWaitPolicy({ count });
+                            if (fineOptions.totalTimeout > (Date.now() - start) + waitTime) {
+                                await wait(waitTime);
+                            }
+                            else {
+                                globalTimeout.stop(); // eslint-disable-line no-use-before-define
+                                globalBreak();
+                            }
                         }
                         if (aborted) {
-                            const msg = `Request aborted after ${count - 1} tries, before starting another one`;
-                            lastError = new AbortedHttpError(msg, lastError);
+                            const errorDetails = {
+                                tries: count - 1,
+                                while: "waiting",
+                                timeout: isTimeouted,
+                                globalTimeout: isGlobalTimeouted,
+                            };
+
+                            const msg = `Request aborted ` + JSON.stringify(errorDetails);
+                            lastError = new AbortedHttpError(msg, lastError, errorDetails);
                             break;
                         }
+                        singleTimeout.start();
                         return await this._request(
-                            method, originalUrl, queryParams, body, options, controller.signal,
+                            method, originalUrl, queryParams, body, options, currentController.signal,
                         );
                     }
                     catch (e) {
                         if (e.name === "AbortError") {
-                            const msg = `Request aborted after ${count} tries`;
-                            lastError = new AbortedHttpError(msg, lastError);
-                            break;
+                            const errorDetails = {
+                                tries: count,
+                                while: "connection",
+                                timeout: isTimeouted,
+                                globalTimeout: isGlobalTimeouted,
+                            };
+                            const msg = `Request aborted ` + JSON.stringify(errorDetails);
+                            lastError = new AbortedHttpError(msg, lastError, errorDetails);
+                            // it should not try again if:
+                            // globally timeouted
+                            // aborted by user (abort didn't happened via timeout)
+                            if (isGlobalTimeouted || !isTimeouted) {
+                                break;
+                            }
+                            continue;
                         }
                         lastError = e;
+                    }
+                    finally {
+                        singleTimeout.stop();
                     }
                 }
                 throw lastError ? lastError : new Error("No error thrown"); // @todo what to do if no error saved?
             })().then(resolve, reject);
+        }).finally(() => {
+            globalTimeout.stop(); // eslint-disable-line no-use-before-define
         });
         future.abort = () => {
             aborted = true;
-            controller.abort();
+            currentController && currentController.abort();
         };
+        const globalTimeout = new Timeout(globalBreak, fineOptions.totalTimeout, true);
+
         return future;
     }
 
