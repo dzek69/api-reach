@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - timeout and totalTimeout support
 
 ### Changed
-- updated babel versions and config
+- updated eslint, babel versions and config
 
 ## [0.0.1-alpha.4] - 2019-02-04
 ### Added
