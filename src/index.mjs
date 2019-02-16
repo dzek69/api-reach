@@ -212,7 +212,7 @@ class ApiClient {
                         }
                         singleTimeout.start();
                         return await this._request(
-                            method, originalUrl, queryParams, body, options, currentController.signal,
+                            method, originalUrl, queryParams, body, fineOptions, currentController.signal,
                         );
                     }
                     catch (e) {
