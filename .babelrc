@@ -1,22 +1,24 @@
 {
-  "presets": [
-    [
-      "@babel/env",
-      {
-        "targets": {
-          "browsers": [
-            "last 2 versions", "> 5%", "ie > 11"
-          ]
-        },
-        "useBuiltIns": "entry"
-      }
-    ]
-  ],
-  "env": {
-    "testing": {
-      "plugins": [
-        "rewire"
-      ]
+    "presets": [
+        [
+            "@babel/env",
+            {
+                "targets": {
+                    "browsers": [
+                        ">0.25%",
+                        "not ie 11",
+                        "not op_mini all"
+                    ]
+                },
+                "useBuiltIns": "entry"
+            }
+        ]
+    ],
+    "env": {
+        "testing": {
+            "plugins": [
+                "rewire"
+            ]
+        }
     }
-  }
 }
