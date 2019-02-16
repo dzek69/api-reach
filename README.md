@@ -22,6 +22,8 @@ JavaScript universal API Client that is easy, just-works and is feature rich/plu
 - handle same header, different letters case
 - if using url with query params and object query params - merge them
 - add abort container wrapper, that will abort all requests in it (useful for stopping stuff for websites) [?]
+- add a lot of tests
+- audit for memory leaks or performance degrading (compared to bare fetch)
 
 ### Almost not important
 
