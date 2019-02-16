@@ -166,6 +166,7 @@ class ApiClient {
         const start = Date.now();
         const fineOptions = this._buildFetchOptions(options || {}, body);
         let currentController,
+            globalTimeout,
             aborted = false,
             isGlobalTimeouted = false;
 
@@ -189,11 +190,11 @@ class ApiClient {
                     try {
                         if (count > 1) {
                             const waitTime = fineOptions.retryWaitPolicy({ count });
-                            if (fineOptions.totalTimeout > (Date.now() - start) + waitTime) {
+                            if (!globalTimeout || fineOptions.totalTimeout > (Date.now() - start) + waitTime) {
                                 await wait(waitTime);
                             }
                             else {
-                                globalTimeout.stop(); // eslint-disable-line no-use-before-define
+                                globalTimeout.stop();
                                 globalBreak();
                             }
                         }
@@ -241,13 +242,16 @@ class ApiClient {
                 throw lastError ? lastError : new Error("No error thrown"); // @todo what to do if no error saved?
             })().then(resolve, reject);
         }).finally(() => {
-            globalTimeout.stop(); // eslint-disable-line no-use-before-define
+            globalTimeout && globalTimeout.stop(); // eslint-disable-line no-use-before-define
         });
         future.abort = () => {
             aborted = true;
             currentController && currentController.abort();
         };
-        const globalTimeout = new Timeout(globalBreak, fineOptions.totalTimeout, true);
+
+        if (fineOptions.totalTimeout > 0 && Number.isFinite(fineOptions.totalTimeout)) {
+            globalTimeout = new Timeout(globalBreak, fineOptions.totalTimeout, true);
+        }
 
         return future;
     }
