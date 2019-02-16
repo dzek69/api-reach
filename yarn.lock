@@ -689,6 +689,13 @@ abbrev@1:
   resolved "https://registry.yarnpkg.com/abbrev/-/abbrev-1.1.1.tgz#f8f2c887ad10bf67f634f005b6987fed3179aac8"
   integrity sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==
 
+abort-controller@^2.0.2:
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/abort-controller/-/abort-controller-2.0.2.tgz#f0c059173ac7fdc4dba73e3833102def407a6a29"
+  integrity sha512-JXEYGxxMwiNl9EUdLysK0K0DwB7ENw6KeeaLHgofijTfJYPB/vOer3Mb+IcP913dCfWiQsd05MmVNl0H5PanrQ==
+  dependencies:
+    event-target-shim "^5.0.0"
+
 acorn-jsx@^4.1.1:
   version "4.1.1"
   resolved "https://registry.yarnpkg.com/acorn-jsx/-/acorn-jsx-4.1.1.tgz#e8e41e48ea2fe0c896740610ab6a4ffd8add225e"
@@ -1361,6 +1368,11 @@ esutils@^2.0.2:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/esutils/-/esutils-2.0.2.tgz#0abf4f1caa5bcb1f7a9d8acc6dea4faaa04bac9b"
   integrity sha1-Cr9PHKpbyx96nYrMbepPqqBLrJs=
+
+event-target-shim@^5.0.0:
+  version "5.0.0"
+  resolved "https://registry.yarnpkg.com/event-target-shim/-/event-target-shim-5.0.0.tgz#8fabe06975219af64c36ceed4771cf1ad1c3455c"
+  integrity sha512-vu4tlY5xqMEGj/rzuDHxfvm9Kk2562O5h58i8xwnkMkv/yqmBqBcDJt/vGBrOBbCKuVc5eV3ghYxAX9YUhyi0w==
 
 execa@^1.0.0:
   version "1.0.0"

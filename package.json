@@ -32,6 +32,7 @@
     "node-fetch": "^2.3.0"
   },
   "dependencies": {
+    "abort-controller": "^2.0.2",
     "better-custom-error": "^1.0.0",
     "light-isomorphic-fetch": "^1.0.0",
     "qs": "^6.6.0",

@@ -1,9 +1,10 @@
 import fetch from "node-fetch";
 import qs from "qs";
 import urlJoin from "url-join";
+import AbortController from "abort-controller";
 const stringify = qs.stringify;
 
-import { ClientHttpError, ServerHttpError, ResponseDataTypeMismatchError } from "./errors";
+import { ClientHttpError, ServerHttpError, ResponseDataTypeMismatchError, AbortedHttpError } from "./errors";
 import createResponse from "./response";
 import { isServerError, isClientError } from "./response/matchStatus";
 import Request from "./request";
@@ -44,6 +45,20 @@ const safeUrlParse = (url) => {
     }
 };
 
+const globalOptions = {
+    retry: 1,
+    retryInterval: 1000,
+    retryPolicy({ count }) {
+        return count <= this.retry;
+    },
+    retryWaitPolicy() {
+        return this.retryInterval;
+    },
+    timeout: 1,
+};
+
+const wait = time => new Promise(resolve => setTimeout(resolve, time));
+
 /**
  * @class ApiClient
  */
@@ -52,6 +67,7 @@ class ApiClient {
      * @param {ApiOptions} options
      */
     constructor(options) {
+        // @todo validate them?
         this._options = options || {};
     }
 
@@ -90,6 +106,7 @@ class ApiClient {
         }
 
         return { // @todo filter only known options
+            ...globalOptions,
             ...this._options,
             ...options,
             ...bodyOptions,
@@ -143,9 +160,53 @@ class ApiClient {
         return this.request("DELETE", url, queryParams, body, options);
     }
 
-    async request(method, originalUrl, queryParams, body, options) {
+    request(method, originalUrl, queryParams, body, options = {}) {
+        const controller = new AbortController();
+        const fineOptions = this._buildFetchOptions(options || {}, body);
+        let aborted = false;
+
+        const future = new Promise((resolve, reject) => {
+            let count = 0,
+                lastError = null;
+            return (async () => {
+                while (fineOptions.retryPolicy({ count: ++count })) {
+                    try {
+                        // @todo calculate total timeout - if longer than already used time + wait time - break before
+                        // waiting
+                        if (count > 1) {
+                            await wait(fineOptions.retryWaitPolicy({ count }));
+                        }
+                        if (aborted) {
+                            const msg = `Request aborted after ${count - 1} tries, before starting another one`;
+                            lastError = new AbortedHttpError(msg, lastError);
+                            break;
+                        }
+                        return await this._request(
+                            method, originalUrl, queryParams, body, options, controller.signal,
+                        );
+                    }
+                    catch (e) {
+                        if (e.name === "AbortError") {
+                            const msg = `Request aborted after ${count} tries`;
+                            lastError = new AbortedHttpError(msg, lastError);
+                            break;
+                        }
+                        lastError = e;
+                    }
+                }
+                throw lastError ? lastError : new Error("No error thrown"); // @todo what to do if no error saved?
+            })().then(resolve, reject);
+        });
+        future.abort = () => {
+            aborted = true;
+            controller.abort();
+        };
+        return future;
+    }
+
+    async _request(method, originalUrl, queryParams, body, options, signal) {
         const fetchOptions = {
-            ...this._buildFetchOptions(options || {}, body),
+            ...options,
             method: method.toUpperCase(),
         };
 
@@ -153,7 +214,10 @@ class ApiClient {
 
         const request = new Request(url, fetchOptions, originalUrl, queryParams);
 
-        const result = await fetch(request.url, request.options);
+        const result = await fetch(request.url, {
+            ...request.options,
+            signal,
+        });
 
         const type = this._getType(options || {});
         const response = await createResponse(result, type, request);
