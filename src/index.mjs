@@ -241,7 +241,8 @@ class ApiClient {
                 }
                 throw lastError ? lastError : new Error("No error thrown"); // @todo what to do if no error saved?
             })().then(resolve, reject);
-        }).finally(() => {
+        });
+        future.finally(() => {
             globalTimeout && globalTimeout.stop(); // eslint-disable-line no-use-before-define
         });
         future.abort = () => {
