@@ -1,7 +1,7 @@
-import fetch from "node-fetch"; // eslint-disable-line max-lines
+import fetch from "light-isomorphic-fetch"; // eslint-disable-line max-lines
 import qs from "qs";
 import urlJoin from "url-join";
-import AbortController from "abort-controller";
+import AbortController from "isomorphic-abort-controller";
 import Timeout from "oop-timers/src/Timeout";
 const stringify = qs.stringify;
 

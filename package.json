@@ -1,6 +1,6 @@
 {
   "name": "api-reach",
-  "version": "0.2.1",
+  "version": "0.3.0-beta.1",
   "repository": "https://github.com/dzek69/api-reach.git",
   "author": "Jacek Nowacki @dzek69 <git-public@dzek.eu>",
   "license": "MIT",
@@ -34,6 +34,7 @@
   "dependencies": {
     "abort-controller": "^2.0.2",
     "better-custom-error": "^1.0.0",
+    "isomorphic-abort-controller": "^1.0.0",
     "light-isomorphic-fetch": "^1.0.0",
     "oop-timers": "^1.0.0",
     "qs": "^6.6.0",
