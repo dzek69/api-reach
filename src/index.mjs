@@ -61,6 +61,8 @@ const globalOptions = { // eslint-disable-line object-shorthand
 
 const wait = time => new Promise(resolve => setTimeout(resolve, time));
 
+const noop = () => undefined;
+
 /**
  * @class ApiClient
  */
@@ -244,7 +246,9 @@ class ApiClient {
         });
         future.finally(() => {
             globalTimeout && globalTimeout.stop(); // eslint-disable-line no-use-before-define
-        });
+        }).catch(noop); // noop is required here, as finally is creating new promise branch and throws if errors occurs
+        // and each branch should handle error separately (even if that is the same error)
+
         future.abort = () => {
             aborted = true;
             currentController && currentController.abort();
