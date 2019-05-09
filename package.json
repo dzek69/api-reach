@@ -1,13 +1,13 @@
 {
   "name": "api-reach",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "repository": "https://github.com/dzek69/api-reach.git",
   "author": "Jacek Nowacki @dzek69 <git-public@dzek.eu>",
   "license": "MIT",
   "main": "src/index.mjs",
   "scripts": {
     "test": "cross-env NODE_ENV=testing mocha 'src/**/*.spec.js'",
-    "docs": "node build-scripts/docs && jsdoc src README.md -t node_modules/docdash -d ./docs -u ./tutorials && node build-scripts/docs.after",
+    "docs": "node build-scripts/docs && jsdoc -r src README.md -t node_modules/docdash -d ./docs -u ./tutorials -c jsdoc.json && node build-scripts/docs.after",
     "transpile": "node build-scripts/transpile && babel src -d dist --ignore spec.js",
     "prepublishOnly": "npm run test && npm run lint && npm run docs",
     "prepack": "npm run transpile",

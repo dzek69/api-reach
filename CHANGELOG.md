@@ -3,6 +3,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2019-05-09
+### Changed
+- throwing Timeout error on timeout instead of Aborted error
+### Added
+- a lot of documentation
+### Fixed
+- Vulnerable libraries (upgraded versions in lockfile)
+
 ## [0.3.1] - 2019-04-02
 ### Fixed
 - unhandled rejections even when they are handled from user code

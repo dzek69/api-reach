@@ -5,7 +5,8 @@ import AbortController from "isomorphic-abort-controller";
 import Timeout from "oop-timers/src/Timeout";
 const stringify = qs.stringify;
 
-import { ClientHttpError, ServerHttpError, ResponseDataTypeMismatchError, AbortedHttpError } from "./errors";
+import { ClientHttpError, ServerHttpError, ResponseDataTypeMismatchError, AbortedHttpError, TimeoutHttpError }
+    from "./errors";
 import createResponse from "./response";
 import { isServerError, isClientError } from "./response/matchStatus";
 import Request from "./request";
@@ -18,6 +19,15 @@ import Request from "./request";
 /**
  * @typedef {Object} ApiOptions
  * @property {string} type - expected data type
+ * @property {Object} headers - headers to be send with each request
+ * @property {number} retry - how many times should request try to get a successful response. Can be overridden with
+ * retryPolicy. 1 = no retry, 2 = one retry, etc.
+ * @property {number} retryInterval - time between retries. Can be overriden with retryWaitPolicy
+ * @property {function} retryPolicy - function that decides if request should be retried
+ * @property {function} retryWaitPolicy - function that decides how much time to wait before next retry
+ * @property {number} timeout - timeout for each request
+ * @property {number} totalTimeout - total timeout in which all, including retried requests should be fulfilled
+ * (this includes wait time between, so timeout=100, wait=200, totalTimeout=350 means that retry will have only 50ms)
  */
 
 const contentTypeMap = {
@@ -63,12 +73,18 @@ const wait = time => new Promise(resolve => setTimeout(resolve, time));
 
 const noop = () => undefined;
 
-/**
- * @class ApiClient
- */
+const createAbortError = ({ isTimeouted, isGlobalTimeouted, lastError, errorDetails }) => {
+    const useTimeoutError = isTimeouted || isGlobalTimeouted;
+    if (useTimeoutError) {
+        return new TimeoutHttpError(`Request aborted because of timeout`, lastError, errorDetails);
+    }
+    return new AbortedHttpError(`Request aborted`, lastError, errorDetails);
+};
+
 class ApiClient {
     /**
-     * @param {ApiOptions} options
+     * @class ApiClient
+     * @param {ApiOptions} options - options that will override defaults
      */
     constructor(options) {
         // @todo validate them?
@@ -144,27 +160,107 @@ class ApiClient {
         const hasQS = url.includes("?");
         const appendChar = hasQS ? "&" : "?";
         // @todo extract existing query params from string and include for stringify ?
+        // @todo add support for string query params
 
         return url + appendChar + stringify(queryParams);
     }
 
+    /**
+     * Sends a GET request
+     *
+     * @param {string} url - absolute url or relative that will be joined with base url
+     * @param {Object|null} [queryParams] - query params that will be added to `url`
+     * @param {ApiOptions} [options] - options that will override defaults and options specified in the constructor
+     * @returns {Promise<Response>}
+     * @throws {ClientHttpError}
+     * @throws {ServerHttpError}
+     * @throws {ResponseDataTypeMismatchError}
+     * @throws {AbortedHttpError}
+     * @throws {TimeoutHttpError}
+     * @throws {Error}
+     */
     get(url, queryParams, options) {
         return this.request("GET", url, queryParams, null, options);
     }
 
+    /**
+     * Sends a POST request
+     *
+     * @param {string} url - absolute url or relative that will be joined with base url
+     * @param {Object|null} [queryParams] - query params that will be added to `url`
+     * @param {string|Object} [body] - request body. Used as-is when string or stringified according to given data
+     * `type` when Object
+     * @param {ApiOptions} [options] - options that will override defaults and options specified in the constructor
+     * @returns {Promise<Response>}
+     * @throws {ClientHttpError}
+     * @throws {ServerHttpError}
+     * @throws {ResponseDataTypeMismatchError}
+     * @throws {AbortedHttpError}
+     * @throws {TimeoutHttpError}
+     * @throws {Error}
+     */
     post(url, queryParams, body, options) {
         return this.request("POST", url, queryParams, body, options);
     }
 
+    /**
+     * Sends a PATCH request
+     *
+     * @param {string} url - absolute url or relative that will be joined with base url
+     * @param {Object|null} [queryParams] - query params that will be added to `url`
+     * @param {string|Object} [body] - request body. Used as-is when string or stringified according to given data
+     * `type` when Object
+     * @param {ApiOptions} [options] - options that will override defaults and options specified in the constructor
+     * @returns {Promise<Response>}
+     * @throws {ClientHttpError}
+     * @throws {ServerHttpError}
+     * @throws {ResponseDataTypeMismatchError}
+     * @throws {AbortedHttpError}
+     * @throws {TimeoutHttpError}
+     * @throws {Error}
+     */
     patch(url, queryParams, body, options) {
         return this.request("PATCH", url, queryParams, body, options);
     }
 
+    /**
+     * Sends a DELETE request
+     *
+     * @param {string} url - absolute url or relative that will be joined with base url
+     * @param {Object|null} [queryParams] - query params that will be added to `url`
+     * @param {string|Object} [body] - request body. Used as-is when string or stringified according to given data
+     * `type` when Object
+     * @param {ApiOptions} [options] - options that will override defaults and options specified in the constructor
+     * @returns {Promise<Response>}
+     * @throws {ClientHttpError}
+     * @throws {ServerHttpError}
+     * @throws {ResponseDataTypeMismatchError}
+     * @throws {AbortedHttpError}
+     * @throws {TimeoutHttpError}
+     * @throws {Error}
+     */
     delete(url, queryParams, body, options) {
         return this.request("DELETE", url, queryParams, body, options);
     }
 
-    request(method, originalUrl, queryParams, body, options = {}) { // eslint-disable-line max-lines-per-function
+    /**
+     * Sends a custom method request
+     *
+     * @param {string} method - method to use
+     * @param {string} url - absolute url or relative that will be joined with base url
+     * @param {Object|null} [queryParams] - query params that will be added to `url`
+     * @param {string|Object} [body] - request body. Used as-is when string or stringified according to given data
+     * `type` when Object
+     * @param {ApiOptions} [options] - options that will override defaults and options specified in the constructor
+     * @returns {Promise<Response>}
+     * @throws {ClientHttpError}
+     * @throws {ServerHttpError}
+     * @throws {ResponseDataTypeMismatchError}
+     * @throws {AbortedHttpError}
+     * @throws {TimeoutHttpError}
+     * @throws {Error}
+     */
+    request(method, url, queryParams, body, options = {}) { // eslint-disable-line max-lines-per-function
         const start = Date.now();
         const fineOptions = this._buildFetchOptions(options || {}, body);
         let currentController,
@@ -208,13 +304,12 @@ class ApiClient {
                                 globalTimeout: isGlobalTimeouted,
                             };
 
-                            const msg = `Request aborted ` + JSON.stringify(errorDetails);
-                            lastError = new AbortedHttpError(msg, lastError, errorDetails);
+                            lastError = createAbortError({ isTimeouted, isGlobalTimeouted, lastError, errorDetails });
                             break;
                         }
                         singleTimeout.start();
                         return await this._request(
-                            method, originalUrl, queryParams, body, fineOptions, currentController.signal,
+                            method, url, queryParams, fineOptions, currentController.signal,
                         );
                     }
                     catch (e) {
@@ -225,8 +320,7 @@ class ApiClient {
                                 timeout: isTimeouted,
                                 globalTimeout: isGlobalTimeouted,
                             };
-                            const msg = `Request aborted ` + JSON.stringify(errorDetails);
-                            lastError = new AbortedHttpError(msg, lastError, errorDetails);
+                            lastError = createAbortError({ isTimeouted, isGlobalTimeouted, lastError, errorDetails });
                             // it should not try again if:
                             // globally timeouted
                             // aborted by user (abort didn't happened via timeout)
@@ -261,7 +355,7 @@ class ApiClient {
         return future;
     }
 
-    async _request(method, originalUrl, queryParams, body, options, signal) {
+    async _request(method, originalUrl, queryParams, options, signal) {
         const fetchOptions = {
             ...options,
             method: method.toUpperCase(),
@@ -299,6 +393,13 @@ class ApiClient {
         return response;
     }
 }
+
+/**
+ * Sets global ApiClient configuration that is shared between instances
+ *
+ * @param {Object} options
+ * @param {function} options.URL - `URL`-compatible URL parser, see: https://is.gd/Wbyu4k and https://is.gd/FziUWo
+ */
 ApiClient.configure = options => {
     URLParser = options.URL;
 };

@@ -3,6 +3,16 @@ import matchStatus, {
 } from "./matchStatus";
 import decodeData from "./decodeData";
 
+/**
+ * @class Response
+ * @property {number} status - response status
+ * @property {string} statusText - response status text
+ * @property {Object} headers - response headers
+ * @property {Request} request - request that was send
+ * @property {Object|string} body - response body
+ * @property {string} type - response type
+ * @property {Object|string} [rawBody] - response body as string, when it couldn't be decoded from expected JSON
+ */
 class Response {
     constructor(result, data, request) {
         Object.assign(this, data);

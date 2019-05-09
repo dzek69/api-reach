@@ -13,7 +13,7 @@ const types = {
     [TYPE_INFORMATIONAL]: status => status >= 100 && status < 200,
     [TYPE_SUCCESS]: status => status >= 200 && status < 300,
     [TYPE_REDIRECT]: status => status >= 300 && status < 400,
-    [TYPE_CLIENT_ERROR]: status => status >= 400 && status < 499,
+    [TYPE_CLIENT_ERROR]: status => status >= 400 && status < 499, // 499 is intentional here
     [TYPE_SERVER_ERROR]: status => status >= 500 && status < 600,
 };
 
