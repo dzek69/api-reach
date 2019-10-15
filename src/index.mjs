@@ -372,7 +372,7 @@ class ApiClient {
 
         const type = this._getType(options || {});
         const response = await createResponse(result, type, request);
-        if ("rawBody" in response) {
+        if (response.rawBody) {
             throw new ResponseDataTypeMismatchError("Unexpected type of data received", {
                 response: response,
                 expectedType: type,

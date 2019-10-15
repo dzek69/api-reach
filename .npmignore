@@ -4,6 +4,7 @@
 /dist/**/*.spec.js
 
 test.js
+test2.js
 test.mjs
 
 /.babelrc
@@ -13,3 +14,4 @@ test.mjs
 /.yarnclean
 /.editorconfig
 /.eslintrc.json
+/jsdoc.json
