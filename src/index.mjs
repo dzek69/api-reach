@@ -244,6 +244,26 @@ class ApiClient {
     }
 
     /**
+     * Sends a HEAD request
+     *
+     * @param {string} url - absolute url or relative that will be joined with base url
+     * @param {Object|null} [queryParams] - query params that will be added to `url`
+     * @param {string|Object} [body] - request body. Used as-is when string or stringified according to given data
+     * `type` when Object
+     * @param {ApiOptions} [options] - options that will override defaults and options specified in the constructor
+     * @returns {Promise<Response>}
+     * @throws {ClientHttpError}
+     * @throws {ServerHttpError}
+     * @throws {ResponseDataTypeMismatchError}
+     * @throws {AbortedHttpError}
+     * @throws {TimeoutHttpError}
+     * @throws {Error}
+     */
+    head(url, queryParams, body, options) {
+        return this.request("HEAD", url, queryParams, body, options);
+    }
+
+    /**
      * Sends a custom method request
      *
      * @param {string} method - method to use
@@ -339,7 +359,7 @@ class ApiClient {
             })().then(resolve, reject);
         });
         future.finally(() => {
-            globalTimeout && globalTimeout.stop(); // eslint-disable-line no-use-before-define
+            globalTimeout && globalTimeout.stop();
         }).catch(noop); // noop is required here, as finally is creating new promise branch and throws if errors occurs
         // and each branch should handle error separately (even if that is the same error)
 
@@ -372,7 +392,7 @@ class ApiClient {
 
         const type = this._getType(options || {});
         const response = await createResponse(result, type, request);
-        if (response.rawBody) {
+        if ("rawBody" in response) {
             throw new ResponseDataTypeMismatchError("Unexpected type of data received", {
                 response: response,
                 expectedType: type,
