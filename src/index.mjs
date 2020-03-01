@@ -15,6 +15,7 @@ import Request from "./request";
 // text
 // json
 // raw (binary)
+// stream
 
 /**
  * @typedef {Object} ApiOptions

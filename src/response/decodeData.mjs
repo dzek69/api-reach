@@ -22,6 +22,18 @@ const decodeData = async (response, type) => {
             type: type,
         };
     }
+    if (type === "raw") {
+        return {
+            body: await response.buffer(),
+            type: type,
+        };
+    }
+    if (type === "stream") {
+        return {
+            body: await response.buffer(),
+            type: type,
+        };
+    }
     return {
         body: null,
         type: null,
