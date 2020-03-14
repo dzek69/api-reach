@@ -1,7 +1,7 @@
 import matchStatus, {
     TYPE_INFORMATIONAL, TYPE_SUCCESS, TYPE_REDIRECT, TYPE_CLIENT_ERROR, TYPE_SERVER_ERROR, TYPE_ABORTED,
-} from "./matchStatus";
-import decodeData from "./decodeData";
+} from "./matchStatus.mjs";
+import decodeData from "./decodeData.mjs";
 
 /**
  * @class Response

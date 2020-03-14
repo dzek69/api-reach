@@ -2,14 +2,14 @@ import fetch from "light-isomorphic-fetch"; // eslint-disable-line max-lines
 import qs from "qs";
 import urlJoin from "url-join";
 import AbortController from "isomorphic-abort-controller";
-import Timeout from "oop-timers/src/Timeout";
+import { Timeout } from "oop-timers";
 const stringify = qs.stringify;
 
 import { ClientHttpError, ServerHttpError, ResponseDataTypeMismatchError, AbortedHttpError, TimeoutHttpError }
-    from "./errors";
-import createResponse from "./response";
-import { isServerError, isClientError } from "./response/matchStatus";
-import Request from "./request";
+    from "./errors.mjs";
+import createResponse from "./response/index.mjs";
+import { isServerError, isClientError } from "./response/matchStatus.mjs";
+import Request from "./request/index.mjs";
 
 // Types:
 // text

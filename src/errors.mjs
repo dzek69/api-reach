@@ -1,5 +1,4 @@
-import ce from "better-custom-error/dist";
-const createError = ce.default || ce; // to let it work as bare es modules and common js with babel
+import createError from "better-custom-error";
 
 /**
  * Base/generic error type

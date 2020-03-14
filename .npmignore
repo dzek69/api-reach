@@ -7,7 +7,7 @@ test.js
 test2.js
 test.mjs
 
-/.babelrc
+/.babelrc.cjs
 /yarn.lock
 /*.tgz
 /*.log
