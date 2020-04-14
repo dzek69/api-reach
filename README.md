@@ -11,6 +11,7 @@ JavaScript universal API Client that is easy, just-works and is feature rich/plu
 ### Important
 
 - add cache support
+- methods alternative parameters input (single object instead of sequenced params)
 
 ### Less important
 

@@ -22,7 +22,7 @@ const decodeData = async (response, type) => {
             type: type,
         };
     }
-    if (type === "raw") {
+    if (type === "raw" || type === "binary") {
         return {
             body: await response.buffer(),
             type: type,
@@ -30,7 +30,7 @@ const decodeData = async (response, type) => {
     }
     if (type === "stream") {
         return {
-            body: await response.buffer(),
+            body: response.body,
             type: type,
         };
     }

@@ -57,6 +57,13 @@ const AbortedHttpError = createError("AbortedHttpError", ClientHttpError);
  * @extends Error
  */
 const ResponseDataTypeMismatchError = createError("ResponseDataTypeMismatchError");
+/**
+ * Downloading failed during stream
+ *
+ * @class DownloadError
+ * @extends Error
+ */
+const DownloadError = createError("DownloadError");
 
 export {
     HttpError,
@@ -65,4 +72,5 @@ export {
     TimeoutHttpError,
     AbortedHttpError,
     ResponseDataTypeMismatchError,
+    DownloadError,
 };

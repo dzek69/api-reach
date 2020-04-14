@@ -1,15 +1,18 @@
-import fetch from "light-isomorphic-fetch"; // eslint-disable-line max-lines
+import f from "light-isomorphic-fetch"; // eslint-disable-line max-lines
 import qs from "qs";
 import urlJoin from "url-join";
 import AbortController from "isomorphic-abort-controller";
 import { Timeout } from "oop-timers";
-const stringify = qs.stringify;
 
 import { ClientHttpError, ServerHttpError, ResponseDataTypeMismatchError, AbortedHttpError, TimeoutHttpError }
     from "./errors.mjs";
 import createResponse from "./response/index.mjs";
 import { isServerError, isClientError } from "./response/matchStatus.mjs";
 import Request from "./request/index.mjs";
+import utils from "./utils.mjs";
+
+const stringify = qs.stringify;
+const fetch = f.default || f; // @todo verify if it's needed for stable v3 of node-fetch when it's released
 
 // Types:
 // text
@@ -424,5 +427,7 @@ class ApiClient {
 ApiClient.configure = options => {
     URLParser = options.URL;
 };
+
+ApiClient.utils = utils;
 
 export default ApiClient;

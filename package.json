@@ -1,6 +1,6 @@
 {
   "name": "api-reach",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "repository": "https://github.com/dzek69/api-reach.git",
   "author": "Jacek Nowacki @dzek69 <git-public@dzek.eu>",
   "license": "MIT",
@@ -28,6 +28,7 @@
     "@babel/preset-env": "^7.8.7",
     "@babel/register": "^7.8.6",
     "@dzek69/eslint-config-base": "^1.0.1",
+    "babel-plugin-module-extension": "^0.1.1",
     "babel-plugin-rewire": "^1.2.0",
     "cross-env": "^7.0.2",
     "docdash": "^1.2.0",
@@ -37,8 +38,7 @@
     "jsdoc": "^3.6.3",
     "mocha": "^6.2.2",
     "must": "^0.13.4",
-    "node-fetch": "^2.3.0",
-    "babel-plugin-module-extension": "^0.1.1"
+    "node-fetch": "^2.6.0"
   },
   "dependencies": {
     "abort-controller": "^2.0.2",
@@ -58,7 +58,7 @@
     }
   },
   "libraryTemplate": {
-    "version": "2.0.5",
+    "version": "2.0.8",
     "fixDefaultForCommonJS": true
   }
 }
