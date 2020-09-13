@@ -60,6 +60,13 @@ const safeUrlParse = (url) => {
     }
 };
 
+const getJoinedUrl = (url) => {
+    if (Array.isArray(url)) {
+        return urlJoin(...url);
+    }
+    return url;
+};
+
 const globalOptions = { // eslint-disable-line object-shorthand
     retry: 1,
     retryInterval: 100,
@@ -145,15 +152,15 @@ class ApiClient {
     _buildUrlBase(url, base) {
         const parsedBase = safeUrlParse(base);
         if (!parsedBase || !parsedBase.host) { // @todo throw an Error ?
-            return url;
+            return getJoinedUrl(url);
         }
 
-        const parsedUrl = safeUrlParse(url);
+        const parsedUrl = safeUrlParse(getJoinedUrl(url));
         if (parsedUrl && parsedUrl.base) { // base is valid full url and given url is also full url
             throw new Error("Cannot use absolute url with base url."); // @todo throw custom type?
         }
 
-        return urlJoin(base, url);
+        return urlJoin(base, getJoinedUrl(url));
     }
 
     _buildUrl(originalUrl, queryParams, fetchOptions) {
