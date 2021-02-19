@@ -1,15 +1,19 @@
 # api-reach
 
 JavaScript universal API Client that is easy, just-works and is feature rich/pluggable. Based on `fetch`.
+WIP.
+
+TypeScript support is very limited.
 
 ## Features
 
-- features list is @TODO but it's better than others 😎
+@TODO
 
 ## TODO
 
 ### Important
 
+- better TS support
 - add cache support
 - methods alternative parameters input (single object instead of sequenced params)
 

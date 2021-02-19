@@ -1,4 +1,4 @@
-import createError from "better-custom-error";
+import { createError } from "better-custom-error";
 
 /**
  * Base/generic error type

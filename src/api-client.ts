@@ -1,73 +1,47 @@
-import f from "light-isomorphic-fetch"; // eslint-disable-line max-lines
+/* eslint-disable max-lines */
+import f from "light-isomorphic-fetch";
 import qs from "qs";
 import urlJoin from "url-join";
+// eslint-disable-next-line @typescript-eslint/no-shadow
 import AbortController from "isomorphic-abort-controller";
 import { Timeout } from "oop-timers";
 
 import { ClientHttpError, ServerHttpError, ResponseDataTypeMismatchError, AbortedHttpError, TimeoutHttpError }
-    from "./errors.mjs";
-import createResponse from "./response/index.mjs";
-import { isServerError, isClientError } from "./response/matchStatus.mjs";
-import Request from "./request/index.mjs";
-import utils from "./utils.mjs";
+    from "./errors.js";
+import type { PossibleNonErrorResponses } from "./response/response.js";
+import { ClientErrorResponse, createResponse, ServerErrorResponse } from "./response/response.js";
+import type {
+    AbortErrorDetails,
+    AbortErrorObject,
+    Data,
+    FetchOptions,
+    Options,
+    URLArgument,
+    BodyArgument,
+    AbortablePromise,
+    ConfigureOptions,
+} from "./types";
+import { contentTypeMap, RequestType } from "./const.js";
+import { getJoinedUrl, wait } from "./helpers.js";
+import { ApiRequest } from "./request/request.js";
 
 const stringify = qs.stringify;
-const fetch = f.default || f; // @todo verify if it's needed for stable v3 of node-fetch when it's released
+// @ts-expect-error see todo - it's needed for max compatibility
+const fetch = (f.default || f) as typeof f; // @todo verify if it's needed for stable v3 of node-fetch when its released
 
-// Types:
-// text
-// json
-// raw (binary)
-// stream
-
-/**
- * @typedef {Object} ApiOptions
- * @property {string} type - expected data type
- * @property {Object} headers - headers to be send with each request
- * @property {number} retry - how many times should request try to get a successful response. Can be overridden with
- * retryPolicy. 1 = no retry, 2 = one retry, etc.
- * @property {number} retryInterval - time between retries. Can be overriden with retryWaitPolicy
- * @property {function} retryPolicy - function that decides if request should be retried
- * @property {function} retryWaitPolicy - function that decides how much time to wait before next retry
- * @property {number} timeout - timeout for each request
- * @property {number} totalTimeout - total timeout in which all, including retried requests should be fulfilled
- * (this includes wait time between, so timeout=100, wait=200, totalTimeout=350 means that retry will have only 50ms)
- */
-
-const contentTypeMap = {
-    json: "application/json; charset=utf-8",
-    text: "application/x-www-form-urlencoded",
-};
-
-// const optionsWhitelist = [
-//     "method",
-//     "mode",
-//     "cache",
-//     "credentials",
-//     "headers",
-//     "redirect",
-//     "referrer",
-//     "body",
-// ];
 let URLParser = URL;
 
-const safeUrlParse = (url) => {
+const safeUrlParse = (url?: string) => {
     try {
-        return new URLParser(url);
+        return new URLParser(url!);
     }
-    catch (e) { // eslint-disable-line no-unused-vars
+    catch (e: unknown) { // eslint-disable-line @typescript-eslint/no-unused-vars
         return null;
     }
 };
 
-const getJoinedUrl = (url) => {
-    if (Array.isArray(url)) {
-        return urlJoin(...url);
-    }
-    return url;
-};
-
-const globalOptions = { // eslint-disable-line object-shorthand
+const globalOptions: Required<Omit<Options, "base" | "headers">> = { // eslint-disable-line object-shorthand
+    type: RequestType.json,
     retry: 1,
     retryInterval: 100,
     retryPolicy({ count }) {
@@ -80,43 +54,43 @@ const globalOptions = { // eslint-disable-line object-shorthand
     totalTimeout: 60000,
 };
 
-const wait = time => new Promise(resolve => setTimeout(resolve, time));
-
 const noop = () => undefined;
 
-const createAbortError = ({ isTimeouted, isGlobalTimeouted, lastError, errorDetails }) => {
+const createAbortError = ({ isTimeouted, isGlobalTimeouted, lastError, errorDetails }: AbortErrorObject) => {
     const useTimeoutError = isTimeouted || isGlobalTimeouted;
     if (useTimeoutError) {
-        return new TimeoutHttpError(`Request aborted because of timeout`, lastError, errorDetails);
+        // @TODO do something with errorDetails typecasting
+        return new TimeoutHttpError(`Request aborted because of timeout`, lastError, errorDetails as unknown as Data);
     }
-    return new AbortedHttpError(`Request aborted`, lastError, errorDetails);
+    return new AbortedHttpError(`Request aborted`, lastError, errorDetails as unknown as Data);
 };
 
 class ApiClient {
+    private readonly _options: Options;
+
     /**
      * @class ApiClient
-     * @param {ApiOptions} options - options that will override defaults
+     * @param {Options} options - options that will override defaults
      */
-    constructor(options) {
-        // @todo validate them?
-        this._options = options || {};
+    public constructor(options?: Options) {
+        this._options = options ?? {};
     }
 
-    _getType(options) {
-        return options.type || this._options.type || "json"; // @todo do not hardcode type here
+    private _getType(options: Options): NonNullable<Options["type"]> {
+        return options.type ?? this._options.type ?? RequestType.json;
     }
 
-    _getContentType(options) {
+    private _getContentType(options: Options) {
         const type = this._getType(options);
         return contentTypeMap[type]; // @todo handle unknown type
     }
 
-    _getBody(options, body) {
+    private _getBody(options: Options, body?: BodyArgument) {
         const type = this._getType(options);
-        if (type === "json") {
+        if (type === RequestType.json) {
             return JSON.stringify(body);
         }
-        if (type === "text") {
+        if (type === RequestType.text) {
             if (typeof body === "string") {
                 return body;
             }
@@ -125,12 +99,12 @@ class ApiClient {
         return ""; // @todo throw?
     }
 
-    _buildFetchOptions(options, body) {
+    private _buildFetchOptions(options: Options, method: FetchOptions["method"], body?: BodyArgument): FetchOptions {
         const globalHeaders = this._options.headers;
         const localHeaders = options.headers;
 
-        const contentType = {};
-        const bodyOptions = {};
+        const contentType: { "Content-Type"?: string | null } = {};
+        const bodyOptions: { body?: string } = {};
         if (body != null) {
             contentType["Content-Type"] = this._getContentType(options);
             bodyOptions.body = this._getBody(options, body);
@@ -141,6 +115,7 @@ class ApiClient {
             ...this._options,
             ...options,
             ...bodyOptions,
+            method: method,
             headers: {
                 ...globalHeaders, // @todo handle same header but with different case
                 ...localHeaders, // @todo handle multiple headers
@@ -149,22 +124,25 @@ class ApiClient {
         };
     }
 
-    _buildUrlBase(url, base) {
+    private _buildUrlBase(url: string | string[], base?: string) {
         const parsedBase = safeUrlParse(base);
-        if (!parsedBase || !parsedBase.host) { // @todo throw an Error ?
+        if (!parsedBase?.host) {
+            // if no base is given - just use the url
             return getJoinedUrl(url);
         }
 
+        // base is defined at this point
         const parsedUrl = safeUrlParse(getJoinedUrl(url));
-        if (parsedUrl && parsedUrl.base) { // base is valid full url and given url is also full url
+        if (parsedUrl) { // base is valid full url and given url is also full url
             throw new Error("Cannot use absolute url with base url."); // @todo throw custom type?
         }
 
-        return urlJoin(base, getJoinedUrl(url));
+        return urlJoin(base!, getJoinedUrl(url));
     }
 
-    _buildUrl(originalUrl, queryParams, fetchOptions) {
+    private _buildUrl(originalUrl: URLArgument, queryParams: Data, fetchOptions: FetchOptions) {
         const url = this._buildUrlBase(originalUrl, fetchOptions.base);
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!queryParams) {
             return url;
         }
@@ -181,7 +159,7 @@ class ApiClient {
      *
      * @param {string} url - absolute url or relative that will be joined with base url
      * @param {Object|null} [queryParams] - query params that will be added to `url`
-     * @param {ApiOptions} [options] - options that will override defaults and options specified in the constructor
+     * @param {Options} [options] - options that will override defaults and options specified in the constructor
      * @returns {Promise<Response>}
      * @throws {ClientHttpError}
      * @throws {ServerHttpError}
@@ -190,8 +168,8 @@ class ApiClient {
      * @throws {TimeoutHttpError}
      * @throws {Error}
      */
-    get(url, queryParams, options) {
-        return this.request("GET", url, queryParams, null, options);
+    public async get<T>(url: URLArgument, queryParams: Data, options: Options) {
+        return this.request<T>("GET", url, queryParams, null, options);
     }
 
     /**
@@ -201,7 +179,7 @@ class ApiClient {
      * @param {Object|null} [queryParams] - query params that will be added to `url`
      * @param {string|Object} [body] - request body. Used as-is when string or stringified according to given data
      * `type` when Object
-     * @param {ApiOptions} [options] - options that will override defaults and options specified in the constructor
+     * @param {Options} [options] - options that will override defaults and options specified in the constructor
      * @returns {Promise<Response>}
      * @throws {ClientHttpError}
      * @throws {ServerHttpError}
@@ -210,8 +188,8 @@ class ApiClient {
      * @throws {TimeoutHttpError}
      * @throws {Error}
      */
-    post(url, queryParams, body, options) {
-        return this.request("POST", url, queryParams, body, options);
+    public async post<T>(url: URLArgument, queryParams: Data, body: BodyArgument, options: Options) {
+        return this.request<T>("POST", url, queryParams, body, options);
     }
 
     /**
@@ -221,7 +199,7 @@ class ApiClient {
      * @param {Object|null} [queryParams] - query params that will be added to `url`
      * @param {string|Object} [body] - request body. Used as-is when string or stringified according to given data
      * `type` when Object
-     * @param {ApiOptions} [options] - options that will override defaults and options specified in the constructor
+     * @param {Options} [options] - options that will override defaults and options specified in the constructor
      * @returns {Promise<Response>}
      * @throws {ClientHttpError}
      * @throws {ServerHttpError}
@@ -230,8 +208,8 @@ class ApiClient {
      * @throws {TimeoutHttpError}
      * @throws {Error}
      */
-    patch(url, queryParams, body, options) {
-        return this.request("PATCH", url, queryParams, body, options);
+    public async patch<T>(url: URLArgument, queryParams: Data, body: BodyArgument, options: Options) {
+        return this.request<T>("PATCH", url, queryParams, body, options);
     }
 
     /**
@@ -241,7 +219,7 @@ class ApiClient {
      * @param {Object|null} [queryParams] - query params that will be added to `url`
      * @param {string|Object} [body] - request body. Used as-is when string or stringified according to given data
      * `type` when Object
-     * @param {ApiOptions} [options] - options that will override defaults and options specified in the constructor
+     * @param {Options} [options] - options that will override defaults and options specified in the constructor
      * @returns {Promise<Response>}
      * @throws {ClientHttpError}
      * @throws {ServerHttpError}
@@ -250,8 +228,8 @@ class ApiClient {
      * @throws {TimeoutHttpError}
      * @throws {Error}
      */
-    delete(url, queryParams, body, options) {
-        return this.request("DELETE", url, queryParams, body, options);
+    public async delete<T>(url: URLArgument, queryParams: Data, body: BodyArgument, options: Options) {
+        return this.request<T>("DELETE", url, queryParams, body, options);
     }
 
     /**
@@ -261,7 +239,7 @@ class ApiClient {
      * @param {Object|null} [queryParams] - query params that will be added to `url`
      * @param {string|Object} [body] - request body. Used as-is when string or stringified according to given data
      * `type` when Object
-     * @param {ApiOptions} [options] - options that will override defaults and options specified in the constructor
+     * @param {Options} [options] - options that will override defaults and options specified in the constructor
      * @returns {Promise<Response>}
      * @throws {ClientHttpError}
      * @throws {ServerHttpError}
@@ -270,8 +248,8 @@ class ApiClient {
      * @throws {TimeoutHttpError}
      * @throws {Error}
      */
-    head(url, queryParams, body, options) {
-        return this.request("HEAD", url, queryParams, body, options);
+    public async head<T>(url: URLArgument, queryParams: Data, body: BodyArgument, options: Options) {
+        return this.request<T>("HEAD", url, queryParams, body, options);
     }
 
     /**
@@ -282,7 +260,7 @@ class ApiClient {
      * @param {Object|null} [queryParams] - query params that will be added to `url`
      * @param {string|Object} [body] - request body. Used as-is when string or stringified according to given data
      * `type` when Object
-     * @param {ApiOptions} [options] - options that will override defaults and options specified in the constructor
+     * @param {Options} [options] - options that will override defaults and options specified in the constructor
      * @returns {Promise<Response>}
      * @throws {ClientHttpError}
      * @throws {ServerHttpError}
@@ -291,34 +269,35 @@ class ApiClient {
      * @throws {TimeoutHttpError}
      * @throws {Error}
      */
-    request(method, url, queryParams, body, options = {}) { // eslint-disable-line max-lines-per-function
+    public request<T = unknown>(method: string, url: URLArgument, queryParams: Data, body: BodyArgument, options: Options | null = {}) { // eslint-disable-line max-lines-per-function, max-len
         const start = Date.now();
-        const fineOptions = this._buildFetchOptions(options || {}, body);
-        let currentController,
-            globalTimeout,
+        const fineOptions = this._buildFetchOptions(options ?? {}, method, body);
+        let currentController: AbortController,
+            globalTimeout: Timeout,
             aborted = false,
             isGlobalTimeouted = false;
 
         const globalBreak = () => {
             isGlobalTimeouted = true;
-            future.abort(); // eslint-disable-line no-use-before-define
+            future.abort!(); // eslint-disable-line @typescript-eslint/no-use-before-define
         };
 
-        const future = new Promise((resolve, reject) => { // eslint-disable-line max-lines-per-function
+        const future: AbortablePromise<PossibleNonErrorResponses> = new Promise((resolve, reject) => { // eslint-disable-line max-lines-per-function, max-len
             let count = 0,
                 lastError = null;
 
-            return (async () => { // eslint-disable-line max-statements, max-lines-per-function
+            (async () => { // eslint-disable-line max-statements
                 while (fineOptions.retryPolicy({ count: ++count })) {
                     let isTimeouted = false;
                     currentController = new AbortController();
-                    const singleTimeout = new Timeout(() => { // eslint-disable-line no-loop-func
+                    const singleTimeout = new Timeout(() => { // eslint-disable-line @typescript-eslint/no-loop-func
                         isTimeouted = true;
                         currentController.abort();
                     }, fineOptions.timeout);
                     try {
                         if (count > 1) {
                             const waitTime = fineOptions.retryWaitPolicy({ count });
+                            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                             if (!globalTimeout || fineOptions.totalTimeout > (Date.now() - start) + waitTime) {
                                 await wait(waitTime);
                             }
@@ -328,7 +307,7 @@ class ApiClient {
                             }
                         }
                         if (aborted) {
-                            const errorDetails = {
+                            const errorDetails: AbortErrorDetails = {
                                 tries: count - 1,
                                 while: "waiting",
                                 timeout: isTimeouted,
@@ -339,13 +318,14 @@ class ApiClient {
                             break;
                         }
                         singleTimeout.start();
-                        return await this._request(
-                            method, url, queryParams, fineOptions, currentController.signal,
+
+                        return await this._request<T>(
+                            url, queryParams, fineOptions, currentController.signal,
                         );
                     }
-                    catch (e) {
-                        if (e.name === "AbortError") {
-                            const errorDetails = {
+                    catch (e: unknown) {
+                        if ((e as Error).name === "AbortError") {
+                            const errorDetails: AbortErrorDetails = {
                                 tries: count,
                                 while: "connection",
                                 timeout: isTimeouted,
@@ -355,12 +335,13 @@ class ApiClient {
                             // it should not try again if:
                             // globally timeouted
                             // aborted by user (abort didn't happened via timeout)
+                            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                             if (isGlobalTimeouted || !isTimeouted) {
                                 break;
                             }
                             continue;
                         }
-                        lastError = e;
+                        lastError = e as Error;
                     }
                     finally {
                         singleTimeout.stop();
@@ -370,13 +351,13 @@ class ApiClient {
             })().then(resolve, reject);
         });
         future.finally(() => {
-            globalTimeout && globalTimeout.stop();
+            globalTimeout.stop();
         }).catch(noop); // noop is required here, as finally is creating new promise branch and throws if errors occurs
         // and each branch should handle error separately (even if that is the same error)
 
         future.abort = () => {
             aborted = true;
-            currentController && currentController.abort();
+            currentController.abort();
         };
 
         if (fineOptions.totalTimeout > 0 && Number.isFinite(fineOptions.totalTimeout)) {
@@ -386,23 +367,27 @@ class ApiClient {
         return future;
     }
 
-    async _request(method, originalUrl, queryParams, options, signal) {
-        const fetchOptions = {
-            ...options,
-            method: method.toUpperCase(),
-        };
+    private async _request<T>(
+        originalUrl: URLArgument,
+        queryParams: Data,
+        options: FetchOptions,
+        signal: AbortSignal,
+    ): Promise<PossibleNonErrorResponses> {
+        const fetchOptions = options;
 
         const url = this._buildUrl(originalUrl, queryParams, fetchOptions);
 
-        const request = new Request(url, fetchOptions, originalUrl, queryParams);
+        const request = new ApiRequest(url, fetchOptions, originalUrl, queryParams);
 
-        const result = await fetch(request.url, {
+        const result = (await fetch(request.url, {
             ...request.options,
+            // @ts-expect-error random incompatibilities, @TODO fix it
             signal,
-        });
+        }));
 
-        const type = this._getType(options || {});
-        const response = await createResponse(result, type, request);
+        const type = this._getType(options);
+
+        const response = await createResponse<T>(result, type, request);
         if ("rawBody" in response) {
             throw new ResponseDataTypeMismatchError("Unexpected type of data received", {
                 response: response,
@@ -410,17 +395,17 @@ class ApiClient {
             });
         }
 
-        if (isClientError(result.status)) {
+        if (response instanceof ClientErrorResponse) {
             throw new ClientHttpError(result.statusText, {
                 response,
             });
         }
-
-        if (isServerError(result.status)) {
+        if (response instanceof ServerErrorResponse) {
             throw new ServerHttpError(result.statusText, {
                 response,
             });
         }
+
         return response;
     }
 }
@@ -428,13 +413,11 @@ class ApiClient {
 /**
  * Sets global ApiClient configuration that is shared between instances
  *
- * @param {Object} options
+ * @param {ConfigureOptions} options
  * @param {function} options.URL - `URL`-compatible URL parser, see: https://is.gd/Wbyu4k and https://is.gd/FziUWo
  */
-ApiClient.configure = options => {
+const configure = (options: ConfigureOptions) => {
     URLParser = options.URL;
 };
 
-ApiClient.utils = utils;
-
-export default ApiClient;
+export { ApiClient, configure };
