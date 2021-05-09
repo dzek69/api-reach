@@ -868,10 +868,10 @@
   resolved "https://registry.npmjs.org/@dzek69/eslint-config-base/-/eslint-config-base-2.0.0.tgz#1116d9d9b41a5d64b3695256a9733f14bceec8c0"
   integrity sha512-TaPVQ5i3K5GtJxhsS6HMO+KyaKKJGI+6TG0kuCzqPt6MrcwwtWlbLbWdMG6UnSZ3J8sUTT6A57JJmYDffeT6JQ==
 
-"@dzek69/eslint-config-typescript@^0.2.3":
-  version "0.2.3"
-  resolved "https://registry.npmjs.org/@dzek69/eslint-config-typescript/-/eslint-config-typescript-0.2.3.tgz#1ca648e8a4cd8fd86efe8bb79a77cfc0f490e203"
-  integrity sha512-caedvNFNg4MEGEjXfaOduFKfZwLrltwhE4eSIDPSjmGGKEB0h9eikgDlKXl34etfgC4BKRnD/0QL/ZgwCxo5Zw==
+"@dzek69/eslint-config-typescript@^0.3.2":
+  version "0.3.2"
+  resolved "https://registry.npmjs.org/@dzek69/eslint-config-typescript/-/eslint-config-typescript-0.3.2.tgz#4c42d41e294113bcdeb04c858963ce40beebff21"
+  integrity sha512-91tNKjN7owEFL9tfS3ccP5TDYOJqYw4kuCbOltCXomYY5xrzgZ7vTa209rTlG17M+TWbYSVdMvkTWT+MYHfLhQ==
 
 "@eslint/eslintrc@^0.3.0":
   version "0.3.0"
@@ -1608,10 +1608,10 @@ bcrypt-pbkdf@^1.0.0:
   dependencies:
     tweetnacl "^0.14.3"
 
-better-custom-error@^4.0.0:
-  version "4.0.0"
-  resolved "https://registry.npmjs.org/better-custom-error/-/better-custom-error-4.0.0.tgz#c31189a23775953d337ba3919266f9b3b0c0c8b0"
-  integrity sha512-wbZok+ZxsZrSM05X6o8meGLRYIjveVt4sNG1t+wtt9Z1wpxoD3reikR3hlipvLz1Jb7YZgg7aJ1mg4t1i3bqzw==
+better-custom-error@^4.0.1:
+  version "4.0.1"
+  resolved "https://registry.npmjs.org/better-custom-error/-/better-custom-error-4.0.1.tgz#4d34cd4aab91cd6c9c8212ff671626f9c1da5a5d"
+  integrity sha512-SZYnhIkj8jy3m/anw3fguJwvxF34SI7FpGBndKWZm8OitzcsGGpYL7h+6No9XmiQP/0+AZK2YS/5En9i/YDImg==
 
 binary-extensions@^2.0.0:
   version "2.2.0"
@@ -4256,10 +4256,10 @@ onigasm@^2.2.5:
   resolved "https://registry.npmjs.org/oolong/-/oolong-1.15.1.tgz#90bac9e7ce52f60906ab2228d9e2b115f1086cea"
   integrity sha1-kLrJ585S9gkGqyIo2eKxFfEIbOo=
 
-oop-timers@^4.0.0-next.1:
-  version "4.0.0-next.1"
-  resolved "https://registry.npmjs.org/oop-timers/-/oop-timers-4.0.0-next.1.tgz#dcb0d0b688ee05f34dae4f6352e515e98805f578"
-  integrity sha512-2mbH64AgZKCUqhpbeL6cIljxDSVegN61WkSpmkefx+/3GIlkwU0qwW7Hu5TkwljR1PePrbCDicXEeHwxGGodZg==
+oop-timers@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.npmjs.org/oop-timers/-/oop-timers-4.0.0.tgz#84c186a4126f6095f3002ab065aff3ba6b1ec413"
+  integrity sha512-RbKPgH6HMgVlVo0qnKTewycnqW/Bwf98tuQ825oV69P/Vgbna8wGuJx7f5HrP6QUTqvRoOVUpXFrFoa7lhSd8A==
 
 opencollective-postinstall@^2.0.2:
   version "2.0.3"

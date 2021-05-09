@@ -1,6 +1,6 @@
 {
   "name": "api-reach",
-  "version": "0.10.0-beta.0",
+  "version": "0.10.0",
   "repository": "git@github.com:dzek69/api-reach.git",
   "author": "Jacek Nowacki @dzek69 <git-public@dzek.eu>",
   "license": "MIT",
@@ -30,10 +30,10 @@
   "type": "module",
   "dependencies": {
     "abort-controller": "^3.0.0",
-    "better-custom-error": "^4.0.0",
+    "better-custom-error": "^4.0.1",
     "isomorphic-abort-controller": "^2.0.0-beta.3",
     "light-isomorphic-fetch": "^2.0.0-beta.2",
-    "oop-timers": "^4.0.0-next.1",
+    "oop-timers": "^4.0.0",
     "qs": "^6.9.6",
     "url-join": "^4.0.1"
   },
@@ -42,7 +42,7 @@
     "@babel/preset-env": "^7.12.11",
     "@babel/preset-typescript": "^7.12.7",
     "@dzek69/eslint-config-base": "^2.0.0",
-    "@dzek69/eslint-config-typescript": "^0.2.3",
+    "@dzek69/eslint-config-typescript": "^0.3.2",
     "@types/node-fetch": "^2.5.8",
     "@types/qs": "^6.9.5",
     "@types/url-join": "^4.0.0",

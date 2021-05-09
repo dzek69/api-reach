@@ -14,9 +14,11 @@ class ApiRequest {
 
     public readonly originalUrl: URLArgument;
 
-    public readonly queryParams: Data;
+    public readonly queryParams: Data | null | undefined;
 
-    public constructor(url: string, options: FetchOptions, originalUrl: URLArgument, queryParams: Data) {
+    public constructor(
+        url: string, options: FetchOptions, originalUrl: URLArgument, queryParams: Data | null | undefined,
+    ) {
         this.url = url;
         this.options = options;
         this.originalUrl = originalUrl;

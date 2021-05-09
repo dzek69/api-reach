@@ -60,9 +60,9 @@ const createAbortError = ({ isTimeouted, isGlobalTimeouted, lastError, errorDeta
     const useTimeoutError = isTimeouted || isGlobalTimeouted;
     if (useTimeoutError) {
         // @TODO do something with errorDetails typecasting
-        return new TimeoutHttpError(`Request aborted because of timeout`, lastError, errorDetails as unknown as Data);
+        return new TimeoutHttpError(`Request aborted because of timeout`, lastError, errorDetails);
     }
-    return new AbortedHttpError(`Request aborted`, lastError, errorDetails as unknown as Data);
+    return new AbortedHttpError(`Request aborted`, lastError, errorDetails);
 };
 
 class ApiClient {
@@ -140,9 +140,8 @@ class ApiClient {
         return urlJoin(base!, getJoinedUrl(url));
     }
 
-    private _buildUrl(originalUrl: URLArgument, queryParams: Data, fetchOptions: FetchOptions) {
+    private _buildUrl(originalUrl: URLArgument, queryParams: Data | null | undefined, fetchOptions: FetchOptions) {
         const url = this._buildUrlBase(originalUrl, fetchOptions.base);
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!queryParams) {
             return url;
         }
@@ -168,7 +167,7 @@ class ApiClient {
      * @throws {TimeoutHttpError}
      * @throws {Error}
      */
-    public async get<T>(url: URLArgument, queryParams: Data, options: Options) {
+    public async get<T>(url: URLArgument, queryParams?: Data | null, options?: Options | null) {
         return this.request<T>("GET", url, queryParams, null, options);
     }
 
@@ -188,7 +187,9 @@ class ApiClient {
      * @throws {TimeoutHttpError}
      * @throws {Error}
      */
-    public async post<T>(url: URLArgument, queryParams: Data, body: BodyArgument, options: Options) {
+    public async post<T>(
+        url: URLArgument, queryParams?: Data | null, body?: BodyArgument, options?: Options | null,
+    ) {
         return this.request<T>("POST", url, queryParams, body, options);
     }
 
@@ -208,7 +209,9 @@ class ApiClient {
      * @throws {TimeoutHttpError}
      * @throws {Error}
      */
-    public async patch<T>(url: URLArgument, queryParams: Data, body: BodyArgument, options: Options) {
+    public async patch<T>(
+        url: URLArgument, queryParams?: Data | null, body?: BodyArgument, options?: Options | null,
+    ) {
         return this.request<T>("PATCH", url, queryParams, body, options);
     }
 
@@ -228,7 +231,7 @@ class ApiClient {
      * @throws {TimeoutHttpError}
      * @throws {Error}
      */
-    public async delete<T>(url: URLArgument, queryParams: Data, body: BodyArgument, options: Options) {
+    public async delete<T>(url: URLArgument, queryParams?: Data | null, body?: BodyArgument, options?: Options | null) {
         return this.request<T>("DELETE", url, queryParams, body, options);
     }
 
@@ -248,7 +251,9 @@ class ApiClient {
      * @throws {TimeoutHttpError}
      * @throws {Error}
      */
-    public async head<T>(url: URLArgument, queryParams: Data, body: BodyArgument, options: Options) {
+    public async head<T>(
+        url: URLArgument, queryParams?: Data | null, body?: BodyArgument, options?: Options | null,
+    ) {
         return this.request<T>("HEAD", url, queryParams, body, options);
     }
 
@@ -269,7 +274,7 @@ class ApiClient {
      * @throws {TimeoutHttpError}
      * @throws {Error}
      */
-    public request<T = unknown>(method: string, url: URLArgument, queryParams: Data, body: BodyArgument, options: Options | null = {}) { // eslint-disable-line max-lines-per-function, max-len
+    public request<T = unknown>(method: string, url: URLArgument, queryParams?: Data | null, body?: BodyArgument, options: Options | null = {}) { // eslint-disable-line max-lines-per-function, max-len
         const start = Date.now();
         const fineOptions = this._buildFetchOptions(options ?? {}, method, body);
         let currentController: AbortController,
@@ -369,7 +374,7 @@ class ApiClient {
 
     private async _request<T>(
         originalUrl: URLArgument,
-        queryParams: Data,
+        queryParams: Data | null | undefined,
         options: FetchOptions,
         signal: AbortSignal,
     ): Promise<PossibleNonErrorResponses> {

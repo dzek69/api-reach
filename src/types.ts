@@ -1,7 +1,7 @@
 import type { RequestType } from "./const";
 import type { Response as NodeFetchResponse } from "node-fetch";
 
-type Data = Record<string, unknown>;
+type Data = object;
 
 interface RetryInfo {
     count: number;
@@ -40,7 +40,7 @@ type FetchOptions = Omit<Required<Options>, "base"> & {
 };
 
 type URLArgument = string | string[];
-type BodyArgument = string | Data | null;
+type BodyArgument = string | Data | Data[] | null;
 
 interface AbortErrorDetails {
     tries: number;
@@ -56,9 +56,9 @@ interface AbortErrorObject {
     errorDetails: AbortErrorDetails | null;
 }
 
-interface AbortablePromise<T> extends Promise<T> {
+type AbortablePromise<T> = {
     abort?: () => void;
-}
+} & Promise<T>;
 
 interface ResponseDataJSON<T> {
     type: RequestType.json;
