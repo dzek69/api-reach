@@ -34,7 +34,7 @@ import {
     ServerErrorResponse,
 } from "./response/response.js";
 import { contentTypeMap, RequestType } from "./const.js";
-import { createNoopFunctionFromString, getJoinedUrl, wait } from "./helpers.js";
+import { getJoinedUrl, wait } from "./helpers.js";
 import { ApiRequest } from "./request/request.js";
 
 const stringify = qs.stringify;
@@ -142,7 +142,7 @@ class ApiClient {
             bodyOptions.body = this._getBody(options, body);
         }
 
-        return { // @todo filter only known options
+        const opts = { // @todo filter only known options
             ...globalOptions,
             ...this._options,
             ...options,
@@ -154,6 +154,12 @@ class ApiClient {
                 ...contentType,
             },
         };
+
+        Object.defineProperty(opts, "toJSON", {
+            value: () => ({ type: opts.type }),
+        });
+
+        return opts;
     }
 
     private _buildUrlBase(url: string | string[], base?: string) {
@@ -505,9 +511,6 @@ class ApiClient {
                 });
                 return h;
             }
-            if (typeof value === "function") {
-                return `[Function: ${value.name}]`;
-            }
             return value;
         }, space);
     }
@@ -523,13 +526,8 @@ class ApiClient {
 
         const request = new ApiRequest(
             all.request.url,
-            {
-                ...all.request.options,
-                retryPolicy: createNoopFunctionFromString(all.request.options.retryPolicy) as unknown as () => boolean,
-                retryWaitPolicy: createNoopFunctionFromString(
-                    all.request.options.retryWaitPolicy,
-                ) as unknown as () => number,
-            },
+            // @TODO what to do with missing options after (de)serializing? types are different than runtime
+            all.request.options,
             all.request.originalUrl,
             all.request.queryParams,
         );

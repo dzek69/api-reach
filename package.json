@@ -1,6 +1,6 @@
 {
   "name": "api-reach",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "repository": "git@github.com:dzek69/api-reach.git",
   "author": "Jacek Nowacki @dzek69 <git-public@dzek.eu>",
   "license": "MIT",
@@ -44,6 +44,7 @@
     "@babel/preset-typescript": "^7.12.7",
     "@dzek69/eslint-config-base": "^2.0.0",
     "@dzek69/eslint-config-typescript": "^0.3.2",
+    "@keyv/sqlite": "^2.0.2",
     "@types/keyv": "^3.1.1",
     "@types/node-fetch": "^2.5.8",
     "@types/qs": "^6.9.5",
