@@ -1187,6 +1187,13 @@
   resolved "https://registry.npmjs.org/@types/json-schema/-/json-schema-7.0.7.tgz#98a993516c859eb0d5c4c8f098317a9ea68db9ad"
   integrity sha512-cxWFQVseBm6O9Gbw1IWb8r6OS4OhSt3hPZLkFApLjM8TEXROBuQGLAH2i2gZpcXdLBIrpXuTDhH7Vbm1iXmNGA==
 
+"@types/keyv@^3.1.1":
+  version "3.1.1"
+  resolved "https://registry.npmjs.org/@types/keyv/-/keyv-3.1.1.tgz#e45a45324fca9dab716ab1230ee249c9fb52cfa7"
+  integrity sha512-MPtoySlAZQ37VoLaPcTHCu1RWJ4llDkULYZIzOYxlhxBqYPB0RsRlmMU0R6tahtFe27mIdkHV+551ZWV4PLmVw==
+  dependencies:
+    "@types/node" "*"
+
 "@types/node-fetch@^2.5.8":
   version "2.5.8"
   resolved "https://registry.npmjs.org/@types/node-fetch/-/node-fetch-2.5.8.tgz#e199c835d234c7eb0846f6618012e558544ee2fb"
@@ -1613,10 +1620,10 @@ bcrypt-pbkdf@^1.0.0:
   dependencies:
     tweetnacl "^0.14.3"
 
-better-custom-error@^4.0.1:
-  version "4.0.1"
-  resolved "https://registry.npmjs.org/better-custom-error/-/better-custom-error-4.0.1.tgz#4d34cd4aab91cd6c9c8212ff671626f9c1da5a5d"
-  integrity sha512-SZYnhIkj8jy3m/anw3fguJwvxF34SI7FpGBndKWZm8OitzcsGGpYL7h+6No9XmiQP/0+AZK2YS/5En9i/YDImg==
+better-custom-error@^4.0.5:
+  version "4.0.5"
+  resolved "https://registry.npmjs.org/better-custom-error/-/better-custom-error-4.0.5.tgz#a3d28fa2ad757d057c521e5ddbaa3383bfd7d368"
+  integrity sha512-Upf8/VT6JPYsPG2pEQZg5rB0DPseOqFlqLc0tYQEERWUcihC/E8G/uhMkDJ6sfy7Qnhn7/N4o9UiIjaetbOsYg==
 
 binary-extensions@^2.0.0:
   version "2.2.0"
@@ -3711,6 +3718,11 @@ json-buffer@3.0.0:
   resolved "https://registry.npmjs.org/json-buffer/-/json-buffer-3.0.0.tgz#5b1f397afc75d677bde8bcfc0e47e1f9a3d9a898"
   integrity sha1-Wx85evx11ne96Lz8Dkfh+aPZqJg=
 
+json-buffer@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.npmjs.org/json-buffer/-/json-buffer-3.0.1.tgz#9338802a30d3b6605fbe0613e094008ca8c05a13"
+  integrity sha512-4bV5BfR2mqfQTJm+V5tPPdf+ZpuhiIvTuAB5g8kcrXOZpTT/QwwVRWBywX1ozr6lEuPdbHxwaJlm9G6mI2sfSQ==
+
 json-parse-even-better-errors@^2.3.0:
   version "2.3.1"
   resolved "https://registry.npmjs.org/json-parse-even-better-errors/-/json-parse-even-better-errors-2.3.1.tgz#7c47805a94319928e05777405dc12e1f7a4ee02d"
@@ -3774,6 +3786,13 @@ keyv@^3.0.0:
   dependencies:
     json-buffer "3.0.0"
 
+keyv@^4.0.3:
+  version "4.0.3"
+  resolved "https://registry.npmjs.org/keyv/-/keyv-4.0.3.tgz#4f3aa98de254803cafcd2896734108daa35e4254"
+  integrity sha512-zdGa2TOpSZPq5mU6iowDARnMBZgtCqJ11dJROFi6tg6kTn4nuUdU09lFyLFSaHrWqpIJ+EBq4E8/Dc0Vx5vLdA==
+  dependencies:
+    json-buffer "3.0.1"
+
 kind-of@^3.0.2, kind-of@^3.0.3, kind-of@^3.2.0:
   version "3.2.2"
   resolved "https://registry.npmjs.org/kind-of/-/kind-of-3.2.2.tgz#31ea21a734bab9bbb0f32466d893aea51e4a3c64"
@@ -3836,10 +3855,10 @@ levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
-light-isomorphic-fetch@^2.0.0-beta.2:
-  version "2.0.0-beta.2"
-  resolved "https://registry.npmjs.org/light-isomorphic-fetch/-/light-isomorphic-fetch-2.0.0-beta.2.tgz#42a4e615443b8c27a1bf4a509fe9290793bf89d4"
-  integrity sha512-zy5Fm03jiMVFXn2uhsuEdbboP8uGCQvb7bJ5fErW1WcGzkS3PsRC3B59o0oFzIa0MP9yZrkZamNKJ8secvbDHw==
+light-isomorphic-fetch@^2.0.0-beta.3:
+  version "2.0.0-beta.3"
+  resolved "https://registry.npmjs.org/light-isomorphic-fetch/-/light-isomorphic-fetch-2.0.0-beta.3.tgz#3cd3d59ac70d0f2a8c6e1b73ac5c6c644410b507"
+  integrity sha512-kxkaDaXcoOFsDw8z5bN6LihS9I58eyCo1L6iJdp7YxB7x9ovFbfn5+NgIZ8KXeDiUataRh/SL0DjysoBK0nzpQ==
 
 lines-and-columns@^1.1.6:
   version "1.1.6"
@@ -4123,6 +4142,11 @@ node-notifier@^8.0.0:
     uuid "^8.3.0"
     which "^2.0.2"
 
+node-object-hash@^2.3.2:
+  version "2.3.2"
+  resolved "https://registry.npmjs.org/node-object-hash/-/node-object-hash-2.3.2.tgz#6a201d4296a68d12ae454ec6f8d5e9f69d1b44e0"
+  integrity sha512-QsV+vb6Kegh1V9eKeLJf2swNGkhH1sBtGWQz1fmwknGylbsyUt60iDIJWyGq2DeBRtuywdb+xXJydKa9BFNxTA==
+
 node-releases@^1.1.70:
   version "1.1.70"
   resolved "https://registry.npmjs.org/node-releases/-/node-releases-1.1.70.tgz#66e0ed0273aa65666d7fe78febe7634875426a08"
@@ -4266,10 +4290,10 @@ onigasm@^2.2.5:
   resolved "https://registry.npmjs.org/oolong/-/oolong-1.15.1.tgz#90bac9e7ce52f60906ab2228d9e2b115f1086cea"
   integrity sha1-kLrJ585S9gkGqyIo2eKxFfEIbOo=
 
-oop-timers@^4.0.0:
-  version "4.0.0"
-  resolved "https://registry.npmjs.org/oop-timers/-/oop-timers-4.0.0.tgz#84c186a4126f6095f3002ab065aff3ba6b1ec413"
-  integrity sha512-RbKPgH6HMgVlVo0qnKTewycnqW/Bwf98tuQ825oV69P/Vgbna8wGuJx7f5HrP6QUTqvRoOVUpXFrFoa7lhSd8A==
+oop-timers@^4.0.1:
+  version "4.0.1"
+  resolved "https://registry.npmjs.org/oop-timers/-/oop-timers-4.0.1.tgz#b725d080f2de6a98ca9d2338e2b4eb7b6c8cc2cf"
+  integrity sha512-2fms3Sz6+R/euNmjPdgeklQmBqcAJ7ws/yMUbhjkh4dLqK5B/Jhs2t9hm5OguX1J8LDwK6howdYU+/zEyfQXWA==
 
 opencollective-postinstall@^2.0.2:
   version "2.0.3"

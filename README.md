@@ -1,9 +1,9 @@
 # api-reach
 
-JavaScript universal API Client that is easy, just-works and is feature rich/pluggable. Based on `fetch`.
+JavaScript universal API Client that is easy, just-works and is feature rich. Based on `fetch`.
 WIP.
 
-TypeScript support is very limited.
+TypeScript support is limited.
 
 ## Features
 
@@ -14,7 +14,6 @@ TypeScript support is very limited.
 ### Important
 
 - better TS support
-- add cache support
 - methods alternative parameters input (single object instead of sequenced params)
 
 ### Less important

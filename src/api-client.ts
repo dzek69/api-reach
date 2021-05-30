@@ -1,15 +1,16 @@
 /* eslint-disable max-lines */
-import f from "light-isomorphic-fetch";
+// eslint-disable-next-line @typescript-eslint/no-shadow
+import f, { Headers } from "light-isomorphic-fetch";
 import qs from "qs";
 import urlJoin from "url-join";
 // eslint-disable-next-line @typescript-eslint/no-shadow
 import AbortController from "isomorphic-abort-controller";
 import { Timeout } from "oop-timers";
+import hasher from "node-object-hash";
 
-import { ClientHttpError, ServerHttpError, ResponseDataTypeMismatchError, AbortedHttpError, TimeoutHttpError }
-    from "./errors.js";
-import type { PossibleNonErrorResponses } from "./response/response.js";
-import { ClientErrorResponse, createResponse, ServerErrorResponse } from "./response/response.js";
+import type { CustomError } from "better-custom-error";
+import type { Response as NodeFetchResponse } from "node-fetch";
+
 import type {
     AbortErrorDetails,
     AbortErrorObject,
@@ -19,17 +20,32 @@ import type {
     URLArgument,
     BodyArgument,
     AbortablePromise,
-    ConfigureOptions,
+    ConfigureOptions, ParsedResponse, ParsedError, PossibleCustomErrorsThrown,
+    ResponseData,
 } from "./types";
+import type { PossibleNonErrorResponses, PossibleResponses } from "./response/response.js";
+
+import { ClientHttpError, ServerHttpError, ResponseDataTypeMismatchError, AbortedHttpError, TimeoutHttpError }
+    from "./errors.js";
+import {
+    ClientErrorResponse,
+    createResponse,
+    createResponseWithData,
+    ServerErrorResponse,
+} from "./response/response.js";
 import { contentTypeMap, RequestType } from "./const.js";
-import { getJoinedUrl, wait } from "./helpers.js";
+import { createNoopFunctionFromString, getJoinedUrl, wait } from "./helpers.js";
 import { ApiRequest } from "./request/request.js";
 
 const stringify = qs.stringify;
-// @ts-expect-error see todo - it's needed for max compatibility
+// @ts-expect-error see todo - it's needed for max compatibility -- todo maybe not needed anymore?
 const fetch = (f.default || f) as typeof f; // @todo verify if it's needed for stable v3 of node-fetch when its released
 
 let URLParser = URL;
+// eslint-disable-next-line @typescript-eslint/unbound-method
+const { hash: ohash } = hasher({ sort: true, coerce: false });
+
+// @TODO add hash support, currently it's a bit broken, test.com/?t=true#test { x: false } will append query after hash!
 
 const safeUrlParse = (url?: string) => {
     try {
@@ -52,6 +68,23 @@ const globalOptions: Required<Omit<Options, "base" | "headers">> = { // eslint-d
     },
     timeout: 30000,
     totalTimeout: 60000,
+    cache: null,
+    cacheKey: (req) => {
+        if (req.method.toLowerCase() !== "get") {
+            return;
+        }
+        return ohash(req);
+    },
+    shouldCacheResponse: (response) => {
+        if (!(response instanceof Error)) { // any non error can be cached
+            return true;
+        }
+        if ((response.details?.response as PossibleResponses) instanceof ClientErrorResponse) {
+            // client error can be cached
+            return true;
+        }
+        return false;
+    },
 };
 
 const noop = () => undefined;
@@ -59,7 +92,6 @@ const noop = () => undefined;
 const createAbortError = ({ isTimeouted, isGlobalTimeouted, lastError, errorDetails }: AbortErrorObject) => {
     const useTimeoutError = isTimeouted || isGlobalTimeouted;
     if (useTimeoutError) {
-        // @TODO do something with errorDetails typecasting
         return new TimeoutHttpError(`Request aborted because of timeout`, lastError, errorDetails);
     }
     return new AbortedHttpError(`Request aborted`, lastError, errorDetails);
@@ -82,7 +114,7 @@ class ApiClient {
 
     private _getContentType(options: Options) {
         const type = this._getType(options);
-        return contentTypeMap[type]; // @todo handle unknown type
+        return contentTypeMap[type]; // @todo handle unknown type on runtime?
     }
 
     private _getBody(options: Options, body?: BodyArgument) {
@@ -277,7 +309,12 @@ class ApiClient {
     public request<T = unknown>(method: string, url: URLArgument, queryParams?: Data | null, body?: BodyArgument, options: Options | null = {}) { // eslint-disable-line max-lines-per-function, max-len
         const start = Date.now();
         const fineOptions = this._buildFetchOptions(options ?? {}, method, body);
-        let currentController: AbortController,
+        const fullUrl = this._buildUrl(url, queryParams, fineOptions);
+        const request = new ApiRequest(fullUrl, fineOptions, url, queryParams);
+
+        let cacheKey: string | undefined = undefined,
+
+            currentController: AbortController,
             globalTimeout: Timeout,
             aborted = false,
             isGlobalTimeouted = false;
@@ -292,6 +329,26 @@ class ApiClient {
                 lastError = null;
 
             (async () => { // eslint-disable-line max-statements
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                if (fineOptions.cache && fineOptions.cacheKey) {
+                    cacheKey = fineOptions.cacheKey({
+                        url: fullUrl,
+                        method: request.options.method,
+                        headers: request.options.headers,
+                        body: request.options.body,
+                    });
+                    if (cacheKey) {
+                        const cachedResult = await fineOptions.cache.get(cacheKey);
+                        if (cachedResult) {
+                            const result = ApiClient.parseStringifiedReponse(cachedResult);
+                            if (result instanceof Error) {
+                                throw result;
+                            }
+                            return result; // @todo ts omit error responses here
+                        }
+                    }
+                }
+
                 while (fineOptions.retryPolicy({ count: ++count })) {
                     let isTimeouted = false;
                     currentController = new AbortController();
@@ -299,6 +356,7 @@ class ApiClient {
                         isTimeouted = true;
                         currentController.abort();
                     }, fineOptions.timeout);
+
                     try {
                         if (count > 1) {
                             const waitTime = fineOptions.retryWaitPolicy({ count });
@@ -324,9 +382,7 @@ class ApiClient {
                         }
                         singleTimeout.start();
 
-                        return await this._request<T>(
-                            url, queryParams, fineOptions, currentController.signal,
-                        );
+                        return await this._request<T>(request, fineOptions, currentController.signal);
                     }
                     catch (e: unknown) {
                         if ((e as Error).name === "AbortError") {
@@ -353,7 +409,24 @@ class ApiClient {
                     }
                 }
                 throw lastError ? lastError : new Error("No error thrown"); // @todo what to do if no error saved?
-            })().then(resolve, reject);
+            })().then((response) => {
+                // @TODO add option to wait for cache before resolving
+                resolve(response);
+                if (!fineOptions.cache || !cacheKey) {
+                    return;
+                }
+                if (fineOptions.shouldCacheResponse(response)) {
+                    fineOptions.cache.set(cacheKey, ApiClient.stringifyResponse(response)).catch(noop);
+                }
+            }, (error: unknown) => {
+                reject(error);
+                if (!fineOptions.cache || !cacheKey) {
+                    return;
+                }
+                if (fineOptions.shouldCacheResponse(error as CustomError)) {
+                    fineOptions.cache.set(cacheKey, ApiClient.stringifyResponse(error as CustomError)).catch(noop);
+                }
+            });
         });
         future.finally(() => {
             globalTimeout.stop();
@@ -373,17 +446,10 @@ class ApiClient {
     }
 
     private async _request<T>(
-        originalUrl: URLArgument,
-        queryParams: Data | null | undefined,
+        request: ApiRequest,
         options: FetchOptions,
         signal: AbortSignal,
     ): Promise<PossibleNonErrorResponses> {
-        const fetchOptions = options;
-
-        const url = this._buildUrl(originalUrl, queryParams, fetchOptions);
-
-        const request = new ApiRequest(url, fetchOptions, originalUrl, queryParams);
-
         const result = (await fetch(request.url, {
             ...request.options,
             // @ts-expect-error random incompatibilities, @TODO fix it
@@ -391,7 +457,10 @@ class ApiClient {
         }));
 
         const type = this._getType(options);
+        return ApiClient._serveResponse<T>(result, type, request);
+    }
 
+    private static async _serveResponse<T>(result: NodeFetchResponse, type: RequestType, request: ApiRequest) {
         const response = await createResponse<T>(result, type, request);
         if ("rawBody" in response) {
             throw new ResponseDataTypeMismatchError("Unexpected type of data received", {
@@ -412,6 +481,85 @@ class ApiClient {
         }
 
         return response;
+    }
+
+    public static stringifyResponse(
+        response: PossibleResponses | PossibleCustomErrorsThrown, space?: string | number,
+    ): string {
+        const objToStringify = response instanceof Error
+            ? {
+                error: response.name,
+                message: response.message,
+                details: {
+                    ...response.details,
+                    response: response.details?.response,
+                },
+            }
+            : response;
+
+        return JSON.stringify(objToStringify, function replacer(key, value: unknown) {
+            if (value instanceof Headers) {
+                const h: { [key: string]: unknown } = {};
+                Array.from(value.keys()).forEach(mapKey => {
+                    h[mapKey] = value.get(mapKey);
+                });
+                return h;
+            }
+            if (typeof value === "function") {
+                return `[Function: ${value.name}]`;
+            }
+            return value;
+        }, space);
+    }
+
+    // eslint-disable-next-line max-statements
+    public static parseStringifiedReponse<T>(string: string) {
+        const parsedData = JSON.parse(string) as ParsedResponse | ParsedError;
+        const all = "error" in parsedData ? parsedData.details.response : parsedData;
+
+        const status = all.status;
+        const statusText = all.statusText;
+        const headers = new Headers(all.headers);
+
+        const request = new ApiRequest(
+            all.request.url,
+            {
+                ...all.request.options,
+                retryPolicy: createNoopFunctionFromString(all.request.options.retryPolicy) as unknown as () => boolean,
+                retryWaitPolicy: createNoopFunctionFromString(
+                    all.request.options.retryWaitPolicy,
+                ) as unknown as () => number,
+            },
+            all.request.originalUrl,
+            all.request.queryParams,
+        );
+
+        const body = all.body;
+        const rawBody = all.rawBody;
+        const type = all.type;
+
+        const data: ResponseData<T> = {
+            type, body, rawBody,
+        };
+        if (rawBody == null) {
+            delete data.rawBody;
+        }
+
+        const response = createResponseWithData(
+            { status, statusText, headers },
+            type,
+            request,
+            data,
+        );
+        if (!("error" in parsedData)) {
+            return response;
+        }
+
+        // @TODO return correct error type!
+        return new ResponseDataTypeMismatchError(parsedData.message, {
+            ...parsedData.details,
+            response,
+        });
     }
 }
 

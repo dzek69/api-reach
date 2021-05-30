@@ -12,3 +12,5 @@
 /.editorconfig
 /tsconfig.*
 /.eslintrc.json
+
+*.itest.*

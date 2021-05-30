@@ -6,7 +6,7 @@ import decodeData from "./decodeData.js";
 
 import type { RequestType } from "../const.js";
 import type { ApiRequest } from "../request/request.js";
-import type { ResponseData } from "../types.js";
+import type { FetchLikeData, ResponseData } from "../types.js";
 
 /**
  * @class ApiResponse
@@ -33,7 +33,7 @@ class ApiResponse {
 
     public readonly type: RequestType;
 
-    public constructor(result: NodeFetchResponse, data: ResponseData<unknown>, request: ApiRequest) {
+    public constructor(result: FetchLikeData, data: ResponseData<unknown>, request: ApiRequest) {
         this.status = result.status;
         this.statusText = result.statusText;
         this.headers = result.headers;
@@ -54,9 +54,10 @@ class RedirectResponse extends ApiResponse {}
 class ClientErrorResponse extends ApiResponse {}
 class ServerErrorResponse extends ApiResponse {}
 
-const createResponse = async <Format>(result: NodeFetchResponse, type: RequestType, request: ApiRequest) => {
+const createResponseWithData = <Format>(
+    result: FetchLikeData, type: RequestType, request: ApiRequest, data: ResponseData<Format>,
+) => {
     const statusType = matchStatus(result.status);
-    const data = await decodeData<Format>(result, type);
 
     if (statusType === ResponseStatusGroup.Aborted) {
         return new AbortedResponse(result, data, request);
@@ -76,12 +77,20 @@ const createResponse = async <Format>(result: NodeFetchResponse, type: RequestTy
     return new ServerErrorResponse(result, data, request);
 };
 
-type PossibleResponses = ReturnType<typeof createResponse>;
+const createResponse = async <Format>(result: NodeFetchResponse, type: RequestType, request: ApiRequest) => {
+    const data = await decodeData<Format>(result, type);
+    return createResponseWithData<Format>(result, type, request, data);
+};
+
+type Await<T> = T extends Promise<infer U> ? U : T;
+
+type PossibleResponses = Await<ReturnType<typeof createResponse>>;
 type PossibleNonErrorResponses = InformationalResponse | SuccessResponse | RedirectResponse;
 type PossibleErrorResponses = AbortedResponse | ClientErrorResponse | ServerErrorResponse;
 
 export {
     createResponse,
+    createResponseWithData,
     ApiResponse,
     AbortedResponse,
     InformationalResponse,

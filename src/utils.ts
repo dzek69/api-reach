@@ -8,6 +8,7 @@ import type { Data, Options, ResponseDataStream, URLArgument } from "./types";
 /**
  * Downloads a file into writable stream
  *
+ * @param {stream.Writable} writableStream
  * @param {ApiClient} api
  * @param {string} method - method to use
  * @param {string} url - absolute url or relative that will be joined with base url
@@ -15,19 +16,18 @@ import type { Data, Options, ResponseDataStream, URLArgument } from "./types";
  * @param {string|Object} [body] - request body. Used as-is when string or stringified according to given data
  * `type` when Object
  * @param {Options} [options] - options that will override defaults and options specified in the constructor
- * @param {stream.Writable} writableStream
  * @returns {Promise<Response>}
  */
 const download = async (
+    writableStream: stream.Writable,
     api: ApiClient,
     method: string,
     url: URLArgument,
-    queryParams: Data,
-    body: Data,
-    options: Options,
-    writableStream: stream.Writable,
+    queryParams: Data | null,
+    body: Data | null,
+    options: Options | null,
 ) => {
-    const res = await api.request<{ elo: true }>(method, url, queryParams, body, {
+    const res = await api.request(method, url, queryParams, body, {
         ...options,
         type: RequestType.stream,
     });
