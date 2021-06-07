@@ -304,7 +304,7 @@ class ApiClient {
      * @param {string|Object} [body] - request body. Used as-is when string or stringified according to given data
      * `type` when Object
      * @param {Options} [options] - options that will override defaults and options specified in the constructor
-     * @returns {Promise<Response>}
+     * @returns {Promise<PossibleNonErrorResponses>}
      * @throws {ClientHttpError}
      * @throws {ServerHttpError}
      * @throws {ResponseDataTypeMismatchError}

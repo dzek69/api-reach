@@ -23,16 +23,16 @@ const download = async (
     api: ApiClient,
     method: string,
     url: URLArgument,
-    queryParams: Data | null,
-    body: Data | null,
-    options: Options | null,
+    queryParams?: Data | null,
+    body?: Data | null,
+    options?: Options | null,
 ) => {
     const res = await api.request(method, url, queryParams, body, {
         ...options,
         type: RequestType.stream,
     });
 
-    return new Promise((resolve, reject) => {
+    return new Promise<typeof res>((resolve, reject) => {
         const resBody = (res.body as ResponseDataStream["body"])!;
         resBody.pipe(writableStream);
         resBody.on("error", (err) => {
@@ -41,7 +41,6 @@ const download = async (
         writableStream.on("finish", () => {
             resolve(res);
         });
-        resolve(true);
     });
 };
 
