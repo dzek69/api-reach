@@ -30,7 +30,6 @@ type CacheShouldCache = (response: PossibleNonErrorResponses | PossibleCustomErr
 /**
  * @typedef {Object} Options
  * @property {string} type - expected data type
- * @property {Object} headers - headers to be send with each request
  * @property {number} retry - how many times should request try to get a successful response. Can be overridden with
  * retryPolicy. 1 = no retry, 2 = one retry, etc.
  * @property {number} retryInterval - time between retries. Can be overriden with retryWaitPolicy
@@ -39,11 +38,12 @@ type CacheShouldCache = (response: PossibleNonErrorResponses | PossibleCustomErr
  * @property {number} timeout - timeout for each request
  * @property {number} totalTimeout - total timeout in which all, including retried requests should be fulfilled
  * (this includes wait time between, so timeout=100, wait=200, totalTimeout=350 means that retry will have only 50ms)
+ * @property {Object} fetchOptions - options to pass to `fetch`
+ * @property {Object} fetchOptions.headers - headers to be send with each request
  */
 interface Options {
     base?: string;
     type?: RequestType;
-    headers?: Data;
     retry?: number;
     retryInterval?: number;
     retryPolicy?: (retryInfo: RetryInfo) => boolean;
@@ -53,13 +53,18 @@ interface Options {
     cache?: CacheInterface | null;
     cacheKey?: CacheGetKey;
     shouldCacheResponse?: CacheShouldCache;
+    fetchOptions?: {
+        headers?: Data;
+    };
 }
 
 type FetchOptions = Omit<Required<Options>, "base"> & {
-    method: string;
-    body?: string;
     base?: string;
-    headers: Data;
+    fetchOptions: {
+        method: string;
+        body?: string;
+        headers: Data;
+    };
 };
 
 type URLArgument = string | string[];

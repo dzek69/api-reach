@@ -56,7 +56,8 @@ const safeUrlParse = (url?: string) => {
     }
 };
 
-const globalOptions: Required<Omit<Options, "base" | "headers">> = { // eslint-disable-line object-shorthand
+// eslint-disable-next-line object-shorthand
+const defaultOptions: Required<Omit<Options, "base" | "fetchOptions">> = {
     type: RequestType.json,
     retry: 1,
     retryInterval: 100,
@@ -131,9 +132,11 @@ class ApiClient {
         return ""; // @todo throw?
     }
 
-    private _buildFetchOptions(options: Options, method: FetchOptions["method"], body?: BodyArgument): FetchOptions {
-        const globalHeaders = this._options.headers;
-        const localHeaders = options.headers;
+    private _buildFetchOptions(
+        options: Options, method: FetchOptions["fetchOptions"]["method"], body?: BodyArgument,
+    ): FetchOptions {
+        const instanceHeaders = this._options.fetchOptions?.headers;
+        const localHeaders = options.fetchOptions?.headers;
 
         const contentType: { "Content-Type"?: string | null } = {};
         const bodyOptions: { body?: string } = {};
@@ -142,16 +145,18 @@ class ApiClient {
             bodyOptions.body = this._getBody(options, body);
         }
 
-        const opts = { // @todo filter only known options
-            ...globalOptions,
+        const opts: FetchOptions = { // @todo filter only known options
+            ...defaultOptions,
             ...this._options,
             ...options,
-            ...bodyOptions,
-            method: method,
-            headers: {
-                ...globalHeaders, // @todo handle same header but with different case
-                ...localHeaders, // @todo handle multiple headers
-                ...contentType,
+            fetchOptions: {
+                ...bodyOptions,
+                method: method,
+                headers: {
+                    ...instanceHeaders, // @todo handle same header but with different case
+                    ...localHeaders, // @todo handle multiple headers
+                    ...contentType,
+                },
             },
         };
 
@@ -339,9 +344,9 @@ class ApiClient {
                 if (fineOptions.cache && fineOptions.cacheKey) {
                     cacheKey = fineOptions.cacheKey({
                         url: fullUrl,
-                        method: request.options.method,
-                        headers: request.options.headers,
-                        body: request.options.body,
+                        method: request.options.fetchOptions.method,
+                        headers: request.options.fetchOptions.headers,
+                        body: request.options.fetchOptions.body,
                     });
                     if (cacheKey) {
                         const cachedResult = await fineOptions.cache.get(cacheKey);
@@ -457,7 +462,7 @@ class ApiClient {
         signal: AbortSignal,
     ): Promise<PossibleNonErrorResponses> {
         const result = (await fetch(request.url, {
-            ...request.options,
+            ...request.options.fetchOptions,
             // @ts-expect-error random incompatibilities, @TODO fix it
             signal,
         }));
