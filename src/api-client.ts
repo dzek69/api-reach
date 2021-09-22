@@ -25,7 +25,16 @@ import type {
 } from "./types";
 import type { PossibleNonErrorResponses, PossibleResponses } from "./response/response.js";
 
-import { ClientHttpError, ServerHttpError, ResponseDataTypeMismatchError, AbortedHttpError, TimeoutHttpError }
+import type {
+    ErrorDetails,
+} from "./errors.js";
+import {
+    ClientHttpError,
+    ServerHttpError,
+    ResponseDataTypeMismatchError,
+    AbortedHttpError,
+    TimeoutHttpError,
+}
     from "./errors.js";
 import {
     ClientErrorResponse,
@@ -434,8 +443,10 @@ class ApiClient {
                 if (!fineOptions.cache || !cacheKey) {
                     return;
                 }
-                if (fineOptions.shouldCacheResponse(error as CustomError)) {
-                    fineOptions.cache.set(cacheKey, ApiClient.stringifyResponse(error as CustomError)).catch(noop);
+                if (fineOptions.shouldCacheResponse(error as CustomError<ErrorDetails>)) {
+                    fineOptions.cache
+                        .set(cacheKey, ApiClient.stringifyResponse(error as CustomError<ErrorDetails>))
+                        .catch(noop);
                 }
             });
         });
@@ -559,10 +570,13 @@ class ApiClient {
         }
 
         // @TODO return correct error type!
-        return new ResponseDataTypeMismatchError(parsedData.message, {
+        const details = {
             ...parsedData.details,
             response,
-        });
+        };
+        // @ts-expect-error Should not return DataMismatch here? see TODO above
+        // and ts is complaining because datamismatch expects `expectedType` in details?
+        return new ResponseDataTypeMismatchError(parsedData.message, details);
     }
 }
 

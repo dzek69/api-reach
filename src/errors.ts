@@ -1,4 +1,7 @@
 import { createError } from "better-custom-error";
+import type { ApiResponse } from "./response/response";
+import type { RequestType } from "./const";
+import type { AbortErrorDetails } from "./types";
 
 /**
  * Base/generic error type
@@ -9,13 +12,22 @@ import { createError } from "better-custom-error";
  * @property {string} stack - stack trace
  */
 
+interface ErrorDetails {
+    response: ApiResponse;
+    [key: string]: unknown;
+}
+
+interface TypeMismatchDetails extends ErrorDetails {
+    expectedType: RequestType;
+}
+
 /**
  * Non-success response custom error
  *
  * @class HttpError
  * @extends Error
  */
-const HttpError = createError("HttpError");
+const HttpError = createError<ErrorDetails>("HttpError");
 /**
  * Response 4xx error
  *
@@ -23,7 +35,7 @@ const HttpError = createError("HttpError");
  * @extends HttpError
  * @extends Error
  */
-const ClientHttpError = createError("ClientHttpError", HttpError);
+const ClientHttpError = createError<ErrorDetails>("ClientHttpError", HttpError);
 /**
  * Response 5xx error
  *
@@ -31,7 +43,7 @@ const ClientHttpError = createError("ClientHttpError", HttpError);
  * @extends HttpError
  * @extends Error
  */
-const ServerHttpError = createError("ServerHttpError", HttpError);
+const ServerHttpError = createError<ErrorDetails>("ServerHttpError", HttpError);
 /**
  * Response timeout error
  *
@@ -40,7 +52,7 @@ const ServerHttpError = createError("ServerHttpError", HttpError);
  * @extends HttpError
  * @extends Error
  */
-const TimeoutHttpError = createError("TimeoutHttpError", ServerHttpError);
+const TimeoutHttpError = createError<AbortErrorDetails>("TimeoutHttpError", ServerHttpError);
 /**
  * Response aborted error
  *
@@ -49,21 +61,21 @@ const TimeoutHttpError = createError("TimeoutHttpError", ServerHttpError);
  * @extends HttpError
  * @extends Error
  */
-const AbortedHttpError = createError("AbortedHttpError", ClientHttpError);
+const AbortedHttpError = createError<AbortErrorDetails>("AbortedHttpError", ClientHttpError);
 /**
  * Response data type was different than expected
  *
  * @class ResponseDataTypeMismatchError
  * @extends Error
  */
-const ResponseDataTypeMismatchError = createError("ResponseDataTypeMismatchError");
+const ResponseDataTypeMismatchError = createError<TypeMismatchDetails>("ResponseDataTypeMismatchError");
 /**
  * Downloading failed during stream
  *
  * @class DownloadError
  * @extends Error
  */
-const DownloadError = createError("DownloadError");
+const DownloadError = createError<ErrorDetails>("DownloadError");
 
 export {
     HttpError,
@@ -73,4 +85,9 @@ export {
     AbortedHttpError,
     ResponseDataTypeMismatchError,
     DownloadError,
+};
+
+export type {
+    ErrorDetails,
+    TypeMismatchDetails,
 };

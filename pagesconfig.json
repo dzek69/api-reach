@@ -1,0 +1,17 @@
+{
+    "groups": [
+        {
+            "title": "Tutorials",
+            "pages": [
+                {
+                    "title": "Basic usage",
+                    "source": "./tutorials/Basic usage.md"
+                },
+                {
+                    "title": "Usage with React Native",
+                    "source": "./tutorials/Usage with React Native.md"
+                }
+            ]
+        }
+    ]
+}
