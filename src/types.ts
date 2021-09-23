@@ -1,5 +1,5 @@
 import type { RequestType } from "./const";
-import type { Response as NodeFetchResponse } from "node-fetch";
+import type { Response as NodeFetchResponse, RequestRedirect as NodeFetchRequestRedirect } from "node-fetch";
 import type { ClientHttpError, ResponseDataTypeMismatchError, ServerHttpError } from "./errors";
 import type { PossibleNonErrorResponses } from "./response/response";
 
@@ -55,6 +55,7 @@ interface Options {
     shouldCacheResponse?: CacheShouldCache;
     fetchOptions?: {
         headers?: Data;
+        redirect?: NodeFetchRequestRedirect;
     };
 }
 
@@ -64,6 +65,7 @@ type FetchOptions = Omit<Required<Options>, "base"> & {
         method: string;
         body?: string;
         headers: Data;
+        redirect?: NodeFetchRequestRedirect;
     };
 };
 

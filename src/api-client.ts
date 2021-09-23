@@ -159,6 +159,8 @@ class ApiClient {
             ...this._options,
             ...options,
             fetchOptions: {
+                ...this._options.fetchOptions,
+                ...options.fetchOptions,
                 ...bodyOptions,
                 method: method,
                 headers: {
