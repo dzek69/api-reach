@@ -221,7 +221,7 @@ class ApiClient {
      * @throws {TimeoutHttpError}
      * @throws {Error}
      */
-    public async get<T>(url: URLArgument, queryParams?: Data | null, options?: Options | null) {
+    public get<T>(url: URLArgument, queryParams?: Data | null, options?: Options | null) {
         return this.request<T>("GET", url, queryParams, null, options);
     }
 
@@ -241,7 +241,7 @@ class ApiClient {
      * @throws {TimeoutHttpError}
      * @throws {Error}
      */
-    public async post<T>(
+    public post<T>(
         url: URLArgument, queryParams?: Data | null, body?: BodyArgument, options?: Options | null,
     ) {
         return this.request<T>("POST", url, queryParams, body, options);
@@ -263,7 +263,7 @@ class ApiClient {
      * @throws {TimeoutHttpError}
      * @throws {Error}
      */
-    public async patch<T>(
+    public patch<T>(
         url: URLArgument, queryParams?: Data | null, body?: BodyArgument, options?: Options | null,
     ) {
         return this.request<T>("PATCH", url, queryParams, body, options);
@@ -285,7 +285,7 @@ class ApiClient {
      * @throws {TimeoutHttpError}
      * @throws {Error}
      */
-    public async delete<T>(url: URLArgument, queryParams?: Data | null, body?: BodyArgument, options?: Options | null) {
+    public delete<T>(url: URLArgument, queryParams?: Data | null, body?: BodyArgument, options?: Options | null) {
         return this.request<T>("DELETE", url, queryParams, body, options);
     }
 
@@ -305,7 +305,7 @@ class ApiClient {
      * @throws {TimeoutHttpError}
      * @throws {Error}
      */
-    public async head<T>(
+    public head<T>(
         url: URLArgument, queryParams?: Data | null, body?: BodyArgument, options?: Options | null,
     ) {
         return this.request<T>("HEAD", url, queryParams, body, options);
