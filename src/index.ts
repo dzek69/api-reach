@@ -18,5 +18,6 @@ export type {
     ResponseDataJSON,
     ResponseDataText,
     ResponseDataBinary,
+    CacheInterface,
     ResponseDataStream,
 } from "./types.js";

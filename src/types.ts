@@ -169,4 +169,5 @@ export type {
     ParsedResponse,
     ParsedError,
     PossibleCustomErrorsThrown,
+    CacheInterface,
 };

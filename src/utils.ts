@@ -38,6 +38,7 @@ const download = async ( // eslint-disable-line max-lines-per-function
         type: RequestType.stream,
     });
 
+    // eslint-disable-next-line max-lines-per-function
     return new Promise<typeof res>((resolve, reject) => {
         x++;
         const id = x;
@@ -45,6 +46,7 @@ const download = async ( // eslint-disable-line max-lines-per-function
 
         let finished = false;
         const safeResolve: typeof resolve = (value) => {
+            // eslint-disable-next-line no-console
             console.log(id, "resolving");
             if (finished) {
                 // eslint-disable-next-line no-console
@@ -55,6 +57,7 @@ const download = async ( // eslint-disable-line max-lines-per-function
             resolve(value);
         };
         const safeReject: typeof reject = (value) => {
+            // eslint-disable-next-line no-console
             console.log(id, "rejecting");
             if (finished) {
                 // eslint-disable-next-line no-console
@@ -88,9 +91,11 @@ const download = async ( // eslint-disable-line max-lines-per-function
         resBody.on("end", () => {
             finishTimeoutTimer.start();
             dataTimeoutTimer.stop();
+            // eslint-disable-next-line no-console
             console.log(id, "READ STREAM ENDED");
         });
         writableStream.on("finish", () => {
+            // eslint-disable-next-line no-console
             console.log(id, "WRITE STREAM ENDED");
             finishTimeoutTimer.stop();
             safeResolve(res);

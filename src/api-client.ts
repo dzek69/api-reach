@@ -10,38 +10,37 @@ import hasher from "node-object-hash";
 
 import type { CustomError } from "better-custom-error";
 import type { Response as NodeFetchResponse } from "node-fetch";
-
 import type {
+    AbortablePromise,
     AbortErrorDetails,
     AbortErrorObject,
+    BodyArgument,
+    ConfigureOptions,
     Data,
     FetchOptions,
     Options,
-    URLArgument,
-    BodyArgument,
-    AbortablePromise,
-    ConfigureOptions, ParsedResponse, ParsedError, PossibleCustomErrorsThrown,
+    ParsedError,
+    ParsedResponse,
+    PossibleCustomErrorsThrown,
     ResponseData,
+    URLArgument,
 } from "./types";
 import type { PossibleNonErrorResponses, PossibleResponses } from "./response/response.js";
+import type { ErrorDetails } from "./errors.js";
 
-import type {
-    ErrorDetails,
-} from "./errors.js";
-import {
-    ClientHttpError,
-    ServerHttpError,
-    ResponseDataTypeMismatchError,
-    AbortedHttpError,
-    TimeoutHttpError,
-}
-    from "./errors.js";
 import {
     ClientErrorResponse,
     createResponse,
     createResponseWithData,
     ServerErrorResponse,
 } from "./response/response.js";
+import {
+    AbortedHttpError,
+    ClientHttpError,
+    ResponseDataTypeMismatchError,
+    ServerHttpError,
+    TimeoutHttpError,
+} from "./errors.js";
 import { contentTypeMap, RequestType } from "./const.js";
 import { getJoinedUrl, wait } from "./helpers.js";
 import { ApiRequest } from "./request/request.js";
@@ -555,10 +554,11 @@ class ApiClient {
         const type = all.type;
 
         const data: ResponseData<T> = {
-            type, body, rawBody,
+            type, body,
         };
-        if (rawBody == null) {
-            delete data.rawBody;
+
+        if (data.type === RequestType.text && rawBody != null) {
+            data.rawBody = rawBody;
         }
 
         const response = createResponseWithData(
