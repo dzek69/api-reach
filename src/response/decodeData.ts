@@ -1,7 +1,7 @@
 import type { Response as NodeFetchResponse } from "node-fetch";
+import type { ResponseData } from "../types.js";
 
 import { RequestType } from "../const.js";
-import type { ResponseData } from "../types.js";
 
 const decodeData = async <Format>(response: NodeFetchResponse, type: RequestType): Promise<ResponseData<Format>> => {
     if (type === RequestType.json) {
@@ -44,4 +44,5 @@ const decodeData = async <Format>(response: NodeFetchResponse, type: RequestType
     };
 };
 
+// eslint-disable-next-line import/no-default-export
 export default decodeData;

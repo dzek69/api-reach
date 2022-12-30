@@ -10,7 +10,6 @@ import hasher from "node-object-hash";
 
 import type { CustomError } from "better-custom-error";
 import type { Response as NodeFetchResponse } from "node-fetch";
-
 import type {
     AbortErrorDetails,
     AbortErrorObject,
@@ -21,13 +20,13 @@ import type {
     BodyArgument,
     AbortablePromise,
     ConfigureOptions, ParsedResponse, ParsedError, PossibleCustomErrorsThrown,
-    ResponseData,
+    ResponseData, RequestInformation,
 } from "./types";
 import type { PossibleNonErrorResponses, PossibleResponses } from "./response/response.js";
-
 import type {
-    ErrorDetails,
+    ErrorDetails, PossibleErrors,
 } from "./errors.js";
+
 import {
     ClientHttpError,
     ServerHttpError,
@@ -48,6 +47,7 @@ import { ApiRequest } from "./request/request.js";
 
 const stringify = qs.stringify;
 // @ts-expect-error see todo - it's needed for max compatibility -- todo maybe not needed anymore?
+// eslint-disable-next-line @typescript-eslint/no-shadow
 const fetch = (f.default || f) as typeof f; // @todo verify if it's needed for stable v3 of node-fetch when its released
 
 let URLParser = URL;
@@ -107,8 +107,12 @@ const createAbortError = ({ isTimeouted, isGlobalTimeouted, lastError, errorDeta
     return new AbortedHttpError(`Request aborted`, lastError, errorDetails);
 };
 
+type PossibleCallbackResponses = PossibleResponses | PossibleErrors;
+
 class ApiClient {
     private readonly _options: Options;
+
+    private _onResponseCallback: ((response: PossibleCallbackResponses) => void) | null = null;
 
     /**
      * @class ApiClient
@@ -116,6 +120,13 @@ class ApiClient {
      */
     public constructor(options?: Options) {
         this._options = options ?? {};
+    }
+
+    public onResponse(callback: (response: PossibleCallbackResponses) => void) {
+        this._onResponseCallback = callback;
+        return () => {
+            this._onResponseCallback = null;
+        };
     }
 
     private _getType(options: Options): NonNullable<Options["type"]> {
@@ -353,12 +364,15 @@ class ApiClient {
             (async () => { // eslint-disable-line max-statements
                 // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                 if (fineOptions.cache && fineOptions.cacheKey) {
-                    cacheKey = fineOptions.cacheKey({
+                    const reqInfo: RequestInformation = {
                         url: fullUrl,
                         method: request.options.fetchOptions.method,
                         headers: request.options.fetchOptions.headers,
-                        body: request.options.fetchOptions.body,
-                    });
+                    };
+                    if (typeof request.options.fetchOptions.body === "string") {
+                        reqInfo.body = request.options.fetchOptions.body;
+                    }
+                    cacheKey = fineOptions.cacheKey(reqInfo);
                     if (cacheKey) {
                         const cachedResult = await fineOptions.cache.get(cacheKey);
                         if (cachedResult) {
@@ -481,6 +495,23 @@ class ApiClient {
         }));
 
         const type = this._getType(options);
+        if (this._onResponseCallback) {
+            let r: PossibleCallbackResponses;
+            try {
+                r = await ApiClient._serveResponse<T>(result, type, request);
+                setTimeout(() => {
+                    this._onResponseCallback?.(r);
+                });
+                return r;
+            }
+            catch (e: unknown) {
+                r = e as typeof ResponseDataTypeMismatchError | typeof ClientHttpError | typeof ServerHttpError;
+                setTimeout(() => {
+                    this._onResponseCallback?.(r);
+                });
+                throw e as Error;
+            }
+        }
         return ApiClient._serveResponse<T>(result, type, request);
     }
 
@@ -555,10 +586,10 @@ class ApiClient {
         const type = all.type;
 
         const data: ResponseData<T> = {
-            type, body, rawBody,
+            type, body,
         };
-        if (rawBody == null) {
-            delete data.rawBody;
+        if (typeof rawBody === "string") {
+            data.rawBody = rawBody;
         }
 
         const response = createResponseWithData(

@@ -1,4 +1,5 @@
 import { createError } from "better-custom-error";
+
 import type { ApiResponse } from "./response/response";
 import type { RequestType } from "./const";
 import type { AbortErrorDetails } from "./types";
@@ -77,6 +78,13 @@ const ResponseDataTypeMismatchError = createError<TypeMismatchDetails>("Response
  */
 const DownloadError = createError<ErrorDetails>("DownloadError");
 
+type PossibleErrors = typeof ClientHttpError
+    | typeof ServerHttpError
+    | typeof TimeoutHttpError
+    | typeof AbortedHttpError
+    | typeof ResponseDataTypeMismatchError
+    | typeof DownloadError;
+
 export {
     HttpError,
     ClientHttpError,
@@ -90,4 +98,5 @@ export {
 export type {
     ErrorDetails,
     TypeMismatchDetails,
+    PossibleErrors,
 };

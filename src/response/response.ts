@@ -1,12 +1,12 @@
 import type { Response as NodeFetchResponse, Headers as NodeFetchHeaders } from "node-fetch";
-
-import { ResponseStatusGroup } from "../const.js";
-import { matchStatus } from "./matchStatus.js";
-import decodeData from "./decodeData.js";
-
 import type { RequestType } from "../const.js";
 import type { ApiRequest } from "../request/request.js";
 import type { FetchLikeData, ResponseData } from "../types.js";
+
+import { ResponseStatusGroup } from "../const.js";
+
+import { matchStatus } from "./matchStatus.js";
+import decodeData from "./decodeData.js";
 
 /**
  * @class ApiResponse

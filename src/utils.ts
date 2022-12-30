@@ -1,9 +1,9 @@
 import type stream from "stream";
+import type { ApiClient } from "./api-client.js";
+import type { Data, Options, ResponseDataStream, URLArgument } from "./types";
 
 import { DownloadError } from "./errors.js";
-import type { ApiClient } from "./api-client.js";
 import { RequestType } from "./const.js";
-import type { Data, Options, ResponseDataStream, URLArgument } from "./types";
 
 /**
  * Downloads a file into writable stream
@@ -36,7 +36,7 @@ const download = async (
         const resBody = (res.body as ResponseDataStream["body"])!;
         resBody.pipe(writableStream);
         resBody.on("error", (err) => {
-            reject(new DownloadError(err));
+            reject(new DownloadError(err as Error));
         });
         writableStream.on("finish", () => {
             resolve(res);
