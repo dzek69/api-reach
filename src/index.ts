@@ -1,23 +1,79 @@
+import type { RequestData } from "./types";
+
+import { Param } from "./types";
+
 interface ApiClientConfig {
     fetch: typeof fetch;
     URL: typeof URL;
     AbortController: typeof AbortController;
 }
 
-type ResponseType = "json" | "text";
-type Coalesce<T, K> = T extends undefined ? K : T;
+type ApiResponseType = "json" | "text";
 
-type ResponsesListType = Record<string, Record<string, Record<string, unknown>>>;
+type BasicJSONTypes = string | number | boolean | null;
+// type JSONFriendly = BasicJSONTypes | JSONFriendly[] | { [key: string]: JSONFriendly };
+
+// This type is a constraint for the ApiClient class, it represents a generic list of responses for methods and urls
+type ApiResponsesListType = Record<string, Record<string, {
+    response: Record<string, unknown>;
+    params?: Record<string, BasicJSONTypes>;
+    body?: Record<string, unknown>;
+    query?: Record<string, unknown>;
+    headers?: Record<string, string>;
+}>>;
+
+interface Opts<RT extends ApiResponseType> {
+    type?: RT;
+}
+
+class ApiClient<T extends ApiResponseType, RL extends ApiResponsesListType> {
+    public request<
+        Mthd extends string,
+        U extends keyof RL[Lowercase<Mthd>],
+        P extends RL[Lowercase<Mthd>][U]["params"],
+        B extends RL[Lowercase<Mthd>][U]["body"],
+        Q extends RL[Lowercase<Mthd>][U]["query"],
+        H extends RL[Lowercase<Mthd>][U]["headers"],
+        D extends RequestData<P, B, Q, H>,
+        RT extends ApiResponseType = T,
+    >(
+        method: Mthd, url: U, data?: D, options?: Opts<RT>,
+    ): T extends "json" ? Promise<RL[Lowercase<Mthd>][U]> : Promise<string> {
+        return "";
+    }
+
+    // public post<U extends keyof RL["post"], RT extends ApiResponseType = T>(
+    //     url: U, options?: Opts<RT>,
+    // ): T extends "json" ? Promise<RL["post"][U]> : Promise<string> {
+    //     return this.request("POST", url,  options);
+    // }
+}
 
 type ResponsesList = {
     "get": {
-        "/users": {
-            status: 400;
+        "/users/:id": {
+            response: {
+                status: "users";
+            };
+            params: {
+                id: number;
+            };
         };
     };
     "post": {
         "/delete": {
-            status: 404;
+            response: {
+                status: "delete";
+            };
+        };
+        "/keke": {
+            response: {
+                status: "keke";
+            };
+            body: {
+                user: number;
+            };
+            headers: never;
         };
     };
 };
@@ -26,25 +82,9 @@ const createApiClient = (config: ApiClientConfig) => {
 
 };
 
-interface Opts<RT extends ResponseType> {
-    type?: RT;
-}
-
-type FetchResponseType<T extends "text" | "json"> =
-    T extends "text" ? string :
-        T extends "json" ? Record<string, string> :
-            never;
-
-class ApiClient<T extends ResponseType, RL extends ResponsesListType> {
-    public request<U extends keyof RL["get"], RT extends ResponseType = T>(
-        url: U, options?: Opts<RT>,
-    ): T extends "json" ? Promise<RL["get"][U]> : Promise<string> {
-        return "";
-    }
-}
-
 const x = new ApiClient<"json", ResponsesList>();
-const data = x.request("/users", { type: "json" });
+const data = x.request("POST", "/keke", { body: { user: 5 }, params: { id: 123 }, headers: { kurde: "string" } }, { type: "text" });
+// const postData = x.post("/keke");
 
 export {
     createApiClient,
