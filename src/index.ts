@@ -1,6 +1,5 @@
 import type { RequestData } from "./types";
-
-import { Param } from "./types";
+import type { ApiResponse } from "./response/response";
 
 interface ApiClientConfig {
     fetch: typeof fetch;
@@ -38,7 +37,7 @@ class ApiClient<T extends ApiResponseType, RL extends ApiResponsesListType> {
         RT extends ApiResponseType = T,
     >(
         method: Mthd, url: U, data?: D, options?: Opts<RT>,
-    ): T extends "json" ? Promise<RL[Lowercase<Mthd>][U]> : Promise<string> {
+    ): T extends "json" ? Promise<ApiResponse<RL[Lowercase<Mthd>][U]["response"]>> : Promise<ApiResponse<string>> {
         return "";
     }
 
@@ -83,7 +82,7 @@ const createApiClient = (config: ApiClientConfig) => {
 };
 
 const x = new ApiClient<"json", ResponsesList>();
-const data = x.request("POST", "/keke", { body: { user: 5 }, params: { id: 123 }, headers: { kurde: "string" } }, { type: "text" });
+const data = await x.request("POST", "/keke", { body: { user: "1" } });
 // const postData = x.post("/keke");
 
 export {
