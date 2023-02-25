@@ -123,7 +123,7 @@ describe("api-reach", () => {
         response.body.args.must.be.an.object();
         response.body.args.must.eql({ page: "1" });
 
-        response.body.data.must.equal("");
+        response.body.data.must.equal(`{"title":"hello"}`);
 
         response.body.files.must.be.an.object();
         response.body.files.must.have.keys([]);
@@ -135,7 +135,7 @@ describe("api-reach", () => {
         response.body.headers.must.have.property("Custom"); // http bin uppercases the name
         response.body.headers.Custom.must.equal("header");
 
-        (response.body.json === null).must.be.true();
+        response.body.json.must.eql({ title: "hello" });
 
         response.body.method.must.equal("POST");
 

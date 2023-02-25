@@ -15,9 +15,14 @@ import type {
 import { contentTypeMap, ExpectedResponseBodyType, RequestBodyType } from "./const.js";
 import { ApiResponse } from "./response/response.js";
 
-const defaultOptions: Pick<Required<Options<ExpectedResponseBodyType, any>>, "requestType" | "responseType"> = {
+const defaultOptions: Pick<
+Required<Options<ExpectedResponseBodyType, any>>,
+"requestType" | "responseType" | "timeout" | "retry"
+> = {
     responseType: ExpectedResponseBodyType.json,
     requestType: RequestBodyType.json,
+    timeout: 30000,
+    retry: 0,
 };
 
 class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
