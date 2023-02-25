@@ -1,8 +1,8 @@
-import type { FetchOptions } from "../types";
+import type { FinalOptions } from "../types";
 
 interface ApiRequestData {
     url: string;
-    options: FetchOptions;
+    options: FinalOptions;
 }
 
 class ApiRequest implements ApiRequestData {
@@ -14,7 +14,7 @@ class ApiRequest implements ApiRequestData {
     /**
      * Merged options (for `fetch` method) that was given for the request
      */
-    public readonly options: FetchOptions;
+    public readonly options: FinalOptions;
 
     // @TODO original URL
     // @TODO original params
