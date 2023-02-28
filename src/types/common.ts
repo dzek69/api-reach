@@ -4,7 +4,7 @@ type BasicJSONTypes = string | number | boolean | null;
 type JSONFriendly = BasicJSONTypes | JSONFriendly[] | { [key: string]: JSONFriendly };
 
 type AbortablePromise<T> = {
-    abort?: () => void;
+    abort: () => void;
 } & Promise<T>;
 
 type GenericJSONResponse = Record<string, unknown>;

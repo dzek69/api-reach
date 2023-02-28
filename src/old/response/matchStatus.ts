@@ -4,12 +4,12 @@ import { ResponseStatusGroup } from "../const.js";
 
 const types = {
     // @todo >= 600 as unknown type?
-    [ResponseStatusGroup.Aborted]: (status: number) => !status || status === 499 || status >= 600,
-    [ResponseStatusGroup.Informational]: (status: number) => status >= 100 && status < 200,
     [ResponseStatusGroup.Success]: (status: number) => status >= 200 && status < 300,
-    [ResponseStatusGroup.Redirect]: (status: number) => status >= 300 && status < 400,
     [ResponseStatusGroup.ClientError]: (status: number) => status >= 400 && status < 499, // 499 is intentional here
     [ResponseStatusGroup.ServerError]: (status: number) => status >= 500 && status < 600,
+    [ResponseStatusGroup.Redirect]: (status: number) => status >= 300 && status < 400,
+    [ResponseStatusGroup.Aborted]: (status: number) => !status || status === 499 || status >= 600,
+    [ResponseStatusGroup.Informational]: (status: number) => status >= 100 && status < 200,
 };
 
 const checkOrder = [

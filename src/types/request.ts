@@ -1,13 +1,11 @@
-type Param = `:${string}`;
-
-interface RequestData<Pr, Bd, Qr, Hd> {
+interface RequestData<Pr, Bd, Bt, Qr, Hd> {
     params?: Pr;
     body?: Bd;
+    bodyType?: Bt;
     query?: Qr;
     headers?: Hd;
 }
 
 export type {
-    Param,
     RequestData,
 };

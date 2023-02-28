@@ -1,8 +1,12 @@
 /* eslint-disable max-lines */
 import urlJoin from "url-join";
 import qs from "qs";
+import { Timeout } from "oop-timers";
+import { noop, omit } from "@ezez/utils";
 
+import type FetchType from "node-fetch";
 import type {
+    AbortablePromise,
     ApiClientConfig,
     ApiEndpoints,
     FinalOptions,
@@ -11,25 +15,39 @@ import type {
     Options,
     RequestData, RequestOptions,
 } from "./types";
+import type { AbortErrorDetails } from "./errors";
+import type { ApiResponse } from "./response/response.js";
 
+import { ClientErrorResponse, ServerErrorResponse, createResponse } from "./response/response.js";
 import { contentTypeMap, ExpectedResponseBodyType, RequestBodyType } from "./const.js";
-import { ApiResponse } from "./response/response.js";
+import { AbortError, TimeoutError, UnknownError, ResponseDataTypeMismatchError } from "./errors.js";
+import { ApiRequest } from "./request/request.js";
+import { HttpClientError, HttpServerError } from "./errors";
 
 const defaultOptions: Pick<
 Required<Options<ExpectedResponseBodyType, any>>,
-"requestType" | "responseType" | "timeout" | "retry"
+"requestType" | "responseType" | "timeout" | "retry" | "throw"
 > = {
     responseType: ExpectedResponseBodyType.json,
     requestType: RequestBodyType.json,
     timeout: 30000,
     retry: 0,
+    throw: {
+        onServerErrorResponses: true,
+        onClientErrorResponses: true,
+    },
 };
 
 class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
     private readonly _options: Options<T, GenericHeaders>;
 
+    private readonly _dependencies: { fetch: typeof FetchType };
+
     public constructor(options?: Options<T, GenericHeaders>) {
         this._options = options ?? {};
+        this._dependencies = {
+            fetch: fetch,
+        };
     }
 
     /**
@@ -116,6 +134,10 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
             ...defaultOptions,
             ...this._options,
             ...options,
+            retry: { // @TODO handle retry options
+                shouldRetry: () => false,
+                interval: () => 0,
+            },
             fetchOptions: {
                 ...this._options.fetchOptions,
                 ...options.fetchOptions,
@@ -198,15 +220,17 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
         U extends keyof RL["get"] & string,
         P extends RL["get"][U]["params"],
         B extends RL["get"][U]["body"],
+        BT extends RL["get"][U]["bodyType"],
         Q extends RL["get"][U]["query"],
         H extends RL["get"][U]["headers"],
-        D extends RequestData<P, B, Q, H>,
+        D extends RequestData<P, B, BT, Q, H>,
+        RB extends RL[Lowercase<"get">][U]["response"],
         RT extends ExpectedResponseBodyType = T,
     >(
         url: U, data?: D, options?: RequestOptions<RT, H>,
-    ): T extends ExpectedResponseBodyType.json
-            ? Promise<ApiResponse<RL["get"][U]["response"]>>
-            : Promise<ApiResponse<string>> {
+    ): AbortablePromise<T extends ExpectedResponseBodyType.json
+            ? ApiResponse<"get", U, P, B, BT, Q, H, RB, RT>
+            : ApiResponse<"get", U, P, string, BT, Q, H, RB, RT>> {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return this.request("GET", url, data, options) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     }
@@ -215,80 +239,237 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
         U extends keyof RL["post"] & string,
         P extends RL["post"][U]["params"],
         B extends RL["post"][U]["body"],
+        BT extends RL["post"][U]["bodyType"],
         Q extends RL["post"][U]["query"],
         H extends RL["post"][U]["headers"],
-        D extends RequestData<P, B, Q, H>,
+        D extends RequestData<P, B, BT, Q, H>,
+        RB extends RL[Lowercase<"post">][U]["response"],
         RT extends ExpectedResponseBodyType = T,
     >(
         url: U, data?: D, options?: RequestOptions<RT, H>,
-    ): T extends ExpectedResponseBodyType.json
-            ? Promise<ApiResponse<RL["post"][U]["response"]>>
-            : Promise<ApiResponse<string>> {
+    ): AbortablePromise<T extends ExpectedResponseBodyType.json
+            ? ApiResponse<"post", U, P, B, BT, Q, H, RB, RT>
+            : ApiResponse<"post", U, P, string, BT, Q, H, RB, RT>> {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return,max-len
         return this.request("POST", url, data, options) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     }
 
     // eslint-disable-next-line max-lines-per-function
-    public async request<
+    public request<
         Mthd extends string,
         U extends keyof RL[Lowercase<Mthd>] & string,
         P extends RL[Lowercase<Mthd>][U]["params"],
         B extends RL[Lowercase<Mthd>][U]["body"],
+        BT extends RL[Lowercase<Mthd>][U]["bodyType"],
         Q extends RL[Lowercase<Mthd>][U]["query"],
         H extends RL[Lowercase<Mthd>][U]["headers"],
-        D extends RequestData<P, B, Q, H>,
+        D extends RequestData<P, B, BT, Q, H>,
+        RB extends RL[Lowercase<Mthd>][U]["response"],
         RT extends ExpectedResponseBodyType = T,
     >(
         method: Mthd, url: U, data?: D, options?: RequestOptions<RT, H>,
-    ): Promise<T extends ExpectedResponseBodyType.json
-            ? ApiResponse<RL[Lowercase<Mthd>][U]["response"]>
-            : ApiResponse<string>> {
+    ): AbortablePromise<RT extends ExpectedResponseBodyType.json
+            ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>
+            : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>> {
         // ------------
+
+        type ApiReturnType = RT extends ExpectedResponseBodyType.json
+            ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>
+            : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>;
 
         const start = Date.now();
         const finalOptions = this._buildFetchOptions(options ?? {}, method, data?.body, data?.headers);
         const finalUrl = this._buildUrl(url, data?.params, data?.query, finalOptions);
+        const request = new ApiRequest(method, { url: url, fullUrl: finalUrl }, data, finalOptions);
 
-        let finalResult: ApiResponse<RL[Lowercase<Mthd>][U]["response"]> | ApiResponse<string>;
+        let cacheKey: string | undefined = undefined,
+            currentController: AbortController | undefined = undefined,
+            globalTimeout: Timeout | undefined = undefined,
+            aborted = false,
+            timedoutGlobal = false;
 
-        const response = await fetch(finalUrl, finalOptions.fetchOptions);
-        const bodyText = await response.text();
-        if (finalOptions.responseType === ExpectedResponseBodyType.json) {
-            let jsonData: RL[Lowercase<Mthd>][U]["response"] | undefined;
+        const globalBreak = () => {
+            timedoutGlobal = true;
+            // eslint-disable-next-line @typescript-eslint/no-use-before-define
+            future.abort();
+        };
+
+        // @ts-expect-error Can we make it work without making abort optional and without ts-ignore?
+        // eslint-disable-next-line max-lines-per-function
+        const future: AbortablePromise<ApiReturnType> = new Promise<ApiReturnType>((resolve, reject) => {
+            let tryNo = 0,
+                lastError: Error | null = null;
+
+            // eslint-disable-next-line max-statements
+            (async () => {
+                // @TODO skip cache stuff on retry
+                if (finalOptions.cache) {
+                    cacheKey = finalOptions.cache.key();
+                    if (cacheKey) {
+                        // @TODO implement cache
+                        throw new Error("Not implemented");
+                    }
+                }
+
+                while (tryNo === 0 || finalOptions.retry.shouldRetry({ tryNo: tryNo + 1 })) {
+                    tryNo++;
+                    let timedoutLocal = false;
+                    currentController = new AbortController();
+                    // eslint-disable-next-line @typescript-eslint/no-loop-func
+                    const singleTimeout = new Timeout(() => {
+                        timedoutLocal = true;
+                        currentController!.abort();
+                    }, typeof finalOptions.timeout === "number" ? finalOptions.timeout : finalOptions.timeout.single);
+
+                    try {
+                        if (tryNo > 1) {
+                            // @TODO implement wait
+                            throw new Error("Not implemented");
+                        }
+                        if (aborted) {
+                            const errorDetails: AbortErrorDetails = {
+                                while: "waiting",
+                                tries: tryNo - 1,
+                            };
+
+                            const becauseOfTimeout = timedoutLocal || timedoutGlobal;
+
+                            lastError = becauseOfTimeout
+                                // @TODO messages
+                                ? new TimeoutError("Connection timed TODO", errorDetails)
+                                : new AbortError("Req abort", errorDetails);
+                        }
+                        singleTimeout.start();
+
+                        return await this._request(request, currentController.signal);
+                    }
+                    catch (e: unknown) {
+                        const normalized = UnknownError.normalize(e);
+                        if (normalized.name === "AbortError") {
+                            // @TODO duplicated section
+                            const errorDetails: AbortErrorDetails = {
+                                while: "connection",
+                                tries: tryNo,
+                            };
+
+                            const becauseOfTimeout = timedoutLocal || timedoutGlobal;
+
+                            lastError = becauseOfTimeout
+                                // @TODO messages
+                                ? new TimeoutError("Connection timed TODO", errorDetails)
+                                : new AbortError("Req abort", errorDetails);
+
+                            if (becauseOfTimeout) {
+                                // prevent more retries
+                                break;
+                            }
+                            continue;
+                        }
+                        lastError = UnknownError.normalize(e);
+                    }
+                    finally {
+                        singleTimeout.stop();
+                    }
+                }
+                throw lastError ? lastError : new Error("No error??"); // @TODO what to do? is this possible?
+            })().then(resp => {
+                // @TODO add option to wait for cache before resolving
+                resolve(resp);
+                if (!cacheKey) {
+                    return;
+                }
+                if (finalOptions.cache?.shouldCacheResponse()) {
+                    // @TODO implement cache
+                    throw new Error("Not implemented");
+                }
+            }, (err: unknown) => {
+                reject(UnknownError.normalize(err));
+                if (!cacheKey) {
+                    return;
+                }
+                if (finalOptions.cache?.shouldCacheResponse()) {
+                    // @TODO implement cache
+                    throw new Error("Not implemented");
+                }
+            });
+        });
+
+        future.finally(() => {
+            globalTimeout?.stop();
+        }).catch(noop);
+
+        future.abort = () => {
+            aborted = true;
+            currentController?.abort();
+        };
+
+        if (
+            typeof finalOptions.timeout !== "number"
+            && finalOptions.timeout.total > 0
+            && Number.isFinite(finalOptions.timeout.total)
+            // TODO these checks could be avoided if we do runtime checks somewhere above
+        ) {
+            globalTimeout = new Timeout(globalBreak, finalOptions.timeout.total, true);
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        return future as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    }
+
+    private async _request<
+        Mthd extends string,
+        U extends keyof RL[Lowercase<Mthd>] & string,
+        P extends RL[Lowercase<Mthd>][U]["params"],
+        B extends RL[Lowercase<Mthd>][U]["body"],
+        BT extends RL[Lowercase<Mthd>][U]["bodyType"],
+        Q extends RL[Lowercase<Mthd>][U]["query"],
+        H extends RL[Lowercase<Mthd>][U]["headers"],
+        RB extends RL[Lowercase<Mthd>][U]["response"],
+        AReq extends ApiRequest<Mthd, U, P, B, BT, Q, H, RT>,
+        RT extends ExpectedResponseBodyType = T,
+    >(request: AReq, signal: AbortSignal): Promise<RT extends ExpectedResponseBodyType.json
+        ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>
+        : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>> {
+        const h = request.options.fetchOptions.headers;
+
+        const response = await this._dependencies.fetch(request.fullUrl, {
+            ...omit(request.options.fetchOptions, ["headers"]),
+            ...(h ? { headers: h } : {}),
+            signal,
+        });
+        const bodyText = (await response.text());
+        let jsonData: RB | undefined;
+
+        const jsonWanted = request.options.responseType === ExpectedResponseBodyType.json;
+        if (jsonWanted) {
             try {
-                jsonData = JSON.parse(bodyText) as RL[Lowercase<Mthd>][U]["response"];
+                jsonData = JSON.parse(bodyText) as RB;
             }
             catch {}
-
-            if (jsonData !== undefined) { // reminder: null is valid JSON
-                finalResult = new ApiResponse<RL[Lowercase<Mthd>][U]["response"]>({
-                    status: response.status,
-                    statusText: response.statusText,
-                    headers: response.headers,
-                    body: jsonData,
-                    request: null,
-                });
-            }
-            else {
-                // @TODO throw mismatch
-                finalResult = new ApiResponse<RL[Lowercase<Mthd>][U]["response"]>({
-                    status: response.status,
-                    statusText: response.statusText,
-                    headers: response.headers,
-                    body: null,
-                    rawBody: bodyText,
-                    request: null,
-                });
-            }
         }
-        else {
-            finalResult = new ApiResponse<RL[Lowercase<Mthd>][U]["response"]>({
-                status: response.status,
-                statusText: response.statusText,
-                headers: response.headers,
-                body: bodyText,
-                request: null,
+
+        const typeMismatch = jsonWanted && jsonData === undefined;
+
+        const finalResult = createResponse({
+            status: response.status,
+            statusText: response.statusText,
+            request: request,
+            body: jsonData ?? bodyText,
+            headers: Object.fromEntries(response.headers.entries()),
+        });
+
+        if (typeMismatch) {
+            throw new ResponseDataTypeMismatchError("Server returned data in unexpected format", {
+                response: finalResult,
+                expectedType: request.options.responseType,
             });
+        }
+
+        if (request.options.throw.onClientErrorResponses && finalResult instanceof ClientErrorResponse) {
+            throw new HttpClientError(response.statusText, { response: finalResult });
+        }
+        if (request.options.throw.onServerErrorResponses && finalResult instanceof ServerErrorResponse) {
+            throw new HttpServerError(response.statusText, { response: finalResult });
         }
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
@@ -304,4 +485,14 @@ const createApiClient = <
 
 export {
     createApiClient,
+    ResponseDataTypeMismatchError,
 };
+
+export {
+    AbortedResponse,
+    InformationalResponse,
+    SuccessResponse,
+    RedirectResponse,
+    ClientErrorResponse,
+    ServerErrorResponse,
+} from "./response/response.js";

@@ -3,14 +3,18 @@ import type { ExpectedResponseBodyType, RequestBodyType } from "../const";
 import type { GenericHeaders } from "./common";
 import type { CacheGetKey, CacheInterface, CacheShouldCacheResponse } from "./cache";
 
+interface RetryInfo {
+    tryNo: number;
+}
+
 interface BasicRetry {
     count: number;
     interval: number;
 }
 
 interface AdvancedRetry {
-    shouldRetry: () => boolean;
-    intervalPolicy: () => number;
+    shouldRetry: (retryInfo: RetryInfo) => boolean;
+    interval: () => number;
 }
 
 type RetryOptions = number | BasicRetry | AdvancedRetry;
@@ -36,6 +40,10 @@ interface Options<RT extends ExpectedResponseBodyType, H extends GenericHeaders>
     retry?: RetryOptions;
     timeout?: number | TimeoutOptions;
     cache?: CacheOptions;
+    throw?: {
+        onClientErrorResponses?: boolean;
+        onServerErrorResponses?: boolean;
+    };
     fetchOptions?: {
         headers?: H;
         redirect?: NodeFetchRequestRedirect;
@@ -56,8 +64,10 @@ type RequestOptions<RT extends ExpectedResponseBodyType, H extends GenericHeader
  */
 type FinalOptions<
     T extends ExpectedResponseBodyType, H extends GenericHeaders,
-> = Omit<Required<Options<T, H>>, "base" | "cache"> & {
+> = Omit<Required<Options<T, H>>, "base" | "cache" | "retry"> & {
     base?: string;
+    cache?: Options<T, H>["cache"];
+    retry: AdvancedRetry;
     fetchOptions?: {
         method: string;
         body?: string;

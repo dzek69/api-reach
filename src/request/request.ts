@@ -1,30 +1,76 @@
-import type { FinalOptions } from "../types";
+import type { FinalOptions, GenericBody, GenericHeaders, GenericParams, GenericQuery, RequestData } from "../types";
+import type { RequestBodyType, ExpectedResponseBodyType } from "../const";
 
-interface ApiRequestData {
-    url: string;
-    options: FinalOptions;
-}
-
-class ApiRequest implements ApiRequestData {
+class ApiRequest<
+    Mthd extends string, U extends string,
+    P extends GenericParams, B extends GenericBody,
+    BT extends RequestBodyType | undefined, Q extends GenericQuery,
+    H extends GenericHeaders, RT extends ExpectedResponseBodyType,
+> {
     /**
-     * Full stringified URL that was accessed (before redirects)
+     * Method used for the request
      */
-    public readonly url: string;
+    public readonly method: Mthd;
 
     /**
-     * Merged options (for `fetch` method) that was given for the request
+     * URL given (without base)
      */
-    public readonly options: FinalOptions;
+    public readonly url: U;
 
-    // @TODO original URL
-    // @TODO original params
-    // @TODO original body
-    // @TODO original query
-    // @TODO original headers
-    // @TODO original method
+    /**
+     * Full URL that was accessed, including:
+     * - base URL
+     * - stringified query params
+     * - stringified URL params (like `:id`)
+     *
+     * It's a URL before redirects
+     */
+    public readonly fullUrl: string;
 
-    public constructor({ url, options }: ApiRequestData) {
+    /**
+     * Params given for the request (to resolve `:id` like parts of the URL)
+     */
+    public readonly params: P | undefined;
+
+    /**
+     * Body that was given for the request
+     */
+    public readonly body: B | undefined;
+
+    /**
+     * Body type that was given for the request
+     */
+    public readonly bodyType: BT | undefined;
+
+    /**
+     * Query params that were given for the request
+     */
+    public readonly query: Q | undefined;
+
+    /**
+     * Headers that were given for the request
+     */
+    public readonly headers: H | undefined;
+
+    /**
+     * Merged options (for `fetch` method) that were used for the request
+     */
+    public readonly options: FinalOptions<RT, GenericHeaders>;
+
+    // @TODO body after stringifying?
+
+    public constructor(
+        method: Mthd, { url, fullUrl }: { url: U; fullUrl: string },
+        data: RequestData<P, B, BT, Q, H> | undefined, options: FinalOptions<RT, GenericHeaders>,
+    ) {
+        this.method = method;
         this.url = url;
+        this.fullUrl = fullUrl;
+        this.params = data?.params;
+        this.body = data?.body;
+        this.bodyType = data?.bodyType;
+        this.query = data?.query;
+        this.headers = data?.headers;
         this.options = options;
     }
 }
