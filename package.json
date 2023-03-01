@@ -37,10 +37,6 @@
   "dependencies": {
     "@ezez/errors": "^6.0.0-beta.1",
     "@ezez/utils": "^1.1.0",
-    "abort-controller": "^3.0.0",
-    "isomorphic-abort-controller": "^2.0.0-beta.3",
-    "light-isomorphic-fetch": "^2.0.0-beta.3",
-    "node-object-hash": "^2.3.2",
     "oop-timers": "^4.0.1",
     "qs": "^6.11.0",
     "url-join": "^4.0.1"
