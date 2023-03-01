@@ -11,6 +11,8 @@ module.exports = {
         url: 'http://localhost:8080',
     },
     moduleNameMapper: {
+        '^ipaddr.js$': 'ipaddr.js',
+        '^uri-js$': 'uri-js',
         '^(.*)\.js$': '$1',
     },
 };
