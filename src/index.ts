@@ -20,9 +20,8 @@ import type { ApiResponse } from "./response/response.js";
 
 import { ClientErrorResponse, ServerErrorResponse, createResponse } from "./response/response.js";
 import { contentTypeMap, ExpectedResponseBodyType, RequestBodyType } from "./const.js";
-import { AbortError, TimeoutError, UnknownError, ResponseDataTypeMismatchError } from "./errors.js";
+import { AbortError, TimeoutError, UnknownError, ResponseDataTypeMismatchError, HttpClientError, HttpServerError } from "./errors.js";
 import { ApiRequest } from "./request/request.js";
-import { HttpClientError, HttpServerError } from "./errors";
 
 const defaultOptions: Pick<
 Required<Options<ExpectedResponseBodyType, any>>,
@@ -142,7 +141,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
                 ...this._options.fetchOptions,
                 ...options.fetchOptions,
                 ...bodyOptions,
-                method: method,
+                method: method.toUpperCase(),
                 headers: { // @TODO handle same header with different case
                     ...instanceHeaders, // TODO handle multiple headers with same name
                     ...requestHeaders,
