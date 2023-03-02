@@ -3,7 +3,7 @@ import { wait } from "@ezez/utils";
 
 import type { HTTPBinAnythingResponse } from "../test/httpbinResponse";
 
-import { AbortError, HttpClientError, HttpError, HttpServerError } from "./errors";
+import { AbortError, HttpClientError, HttpError, HttpServerError, TimeoutError } from "./errors";
 
 import {
     AbortedResponse,
@@ -478,9 +478,59 @@ describe("api-reach", () => {
         // TODO// @TODO test possibility to send body with get anyway + maybe do a configurable throw against that
     });
 
+    describe("supports retries", () => {
+        it("basic", async () => {
+            registerMock(() => (req, res) => {
+                res.status(500).send({ error: "Internal Server Error" });
+            });
+            registerMock(() => (req, res) => {
+                res.status(200).send({ success: true });
+            });
+
+            const request = await localApi.get("/anything/basic", undefined, {
+                retry: 1,
+            });
+            request.body.success.must.equal(true);
+
+            mockHandlers.length.must.equal(0);
+        });
+
+        it("basic 2", async () => {
+            registerMock(() => (req, res) => {
+                res.status(404).send({ error: "Not found" });
+            });
+            registerMock(() => (req, res) => {
+                res.status(404).send({ error: "Not found" });
+            });
+
+            const request = await localApi.get("/anything/basic", undefined, {
+                retry: 1,
+                throw: {
+                    onClientErrorResponses: true,
+                },
+            });
+
+            // @TODO broken
+
+            request.body.error.must.equal("Not found");
+
+            mockHandlers.length.must.equal(0);
+        });
+    });
+
     describe("supports timeouts", () => {
         it("should support single try timeout", async () => {
+            registerMock(() => (req, res) => setTimeout(() => res.send({}), 3000));
 
+            const req = localApi.get("/anything/basic", undefined, {
+                timeout: 300,
+            });
+            await req.then(() => {
+                throw new Error("Expected error to be thrown");
+            }, (e) => {
+                must(e).be.instanceof(TimeoutError);
+                e.message.must.equal("Connection timed TODO");
+            });
         });
     });
 

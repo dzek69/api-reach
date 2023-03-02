@@ -14,7 +14,7 @@ interface BasicRetry {
 
 interface AdvancedRetry {
     shouldRetry: (retryInfo: RetryInfo) => boolean;
-    interval: () => number;
+    interval: (retryInfo: RetryInfo) => number;
 }
 
 type RetryOptions = number | BasicRetry | AdvancedRetry;

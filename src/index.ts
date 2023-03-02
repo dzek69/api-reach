@@ -2,7 +2,7 @@
 import urlJoin from "url-join";
 import qs from "qs";
 import { Timeout } from "oop-timers";
-import { noop, omit } from "@ezez/utils";
+import { noop, omit, wait } from "@ezez/utils";
 
 import type FetchType from "node-fetch";
 import type {
@@ -128,14 +128,32 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
             }
         }
 
+        const retry = options.retry ?? this._options.retry ?? defaultOptions.retry;
+
         const opts: FinalOptions<ExpectedResponseBodyType, NonNullable<GenericHeaders>> = {
             // @TODO filter only known options?
             ...defaultOptions,
             ...this._options,
             ...options,
             retry: { // @TODO handle retry options
-                shouldRetry: () => false,
-                interval: () => 0,
+                shouldRetry: ({ tryNo }) => {
+                    if (typeof retry === "number") {
+                        return tryNo <= retry + 1;
+                    }
+                    if ("count" in retry) {
+                        return tryNo <= retry.count + 1;
+                    }
+                    return retry.shouldRetry({ tryNo });
+                },
+                interval: ({ tryNo }) => {
+                    if (typeof retry === "number") {
+                        return 0;
+                    }
+                    if ("count" in retry) {
+                        return retry.interval;
+                    }
+                    return retry.interval({ tryNo });
+                },
             },
             fetchOptions: {
                 ...this._options.fetchOptions,
@@ -322,8 +340,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
 
                     try {
                         if (tryNo > 1) {
-                            // @TODO implement wait
-                            throw new Error("Not implemented");
+                            await wait(finalOptions.retry.interval({ tryNo }));
                         }
                         if (aborted) {
                             const errorDetails: AbortErrorDetails = {
