@@ -506,11 +506,9 @@ describe("api-reach", () => {
             const request = await localApi.get("/anything/basic", undefined, {
                 retry: 1,
                 throw: {
-                    onClientErrorResponses: true,
+                    onClientErrorResponses: false,
                 },
             });
-
-            // @TODO broken
 
             request.body.error.must.equal("Not found");
 

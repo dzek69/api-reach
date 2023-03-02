@@ -271,8 +271,37 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
         return this.request("POST", url, data, options) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     }
 
-    // eslint-disable-next-line max-lines-per-function
     public request<
+        Mthd extends string,
+        U extends keyof RL[Lowercase<Mthd>] & string,
+        P extends RL[Lowercase<Mthd>][U]["params"],
+        B extends RL[Lowercase<Mthd>][U]["body"],
+        BT extends RL[Lowercase<Mthd>][U]["bodyType"],
+        Q extends RL[Lowercase<Mthd>][U]["query"],
+        H extends RL[Lowercase<Mthd>][U]["headers"],
+        D extends RequestData<P, B, BT, Q, H>,
+        RB extends RL[Lowercase<Mthd>][U]["response"],
+        RT extends ExpectedResponseBodyType = T,
+    >(
+        method: Mthd, url: U, data?: D, options?: RequestOptions<RT, H>,
+    ): AbortablePromise<RT extends ExpectedResponseBodyType.json
+            ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>
+            : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>> {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        return this._prepareAndSendRequest(method, url, data, options).catch((e) => {
+            if (e instanceof HttpClientError && !e.details?.response.request.options.throw.onClientErrorResponses) {
+                return e.details?.response;
+            }
+            if (e instanceof HttpServerError && !e.details?.response.request.options.throw.onServerErrorResponses) {
+                return e.details?.response;
+            }
+            // eslint-disable-next-line @typescript-eslint/no-throw-literal
+            throw e;
+        }) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    }
+
+    // eslint-disable-next-line max-lines-per-function
+    private _prepareAndSendRequest<
         Mthd extends string,
         U extends keyof RL[Lowercase<Mthd>] & string,
         P extends RL[Lowercase<Mthd>][U]["params"],
@@ -357,7 +386,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
                         }
                         singleTimeout.start();
 
-                        return await this._request(request, currentController.signal);
+                        return await this._sendRequest(request, currentController.signal);
                     }
                     catch (e: unknown) {
                         const normalized = UnknownError.normalize(e);
@@ -432,7 +461,8 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
         return future as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     }
 
-    private async _request<
+    // eslint-disable-next-line max-statements,max-lines-per-function
+    private async _sendRequest<
         Mthd extends string,
         U extends keyof RL[Lowercase<Mthd>] & string,
         P extends RL[Lowercase<Mthd>][U]["params"],
@@ -481,10 +511,10 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
             });
         }
 
-        if (request.options.throw.onClientErrorResponses && finalResult instanceof ClientErrorResponse) {
+        if (finalResult instanceof ClientErrorResponse) {
             throw new HttpClientError(response.statusText, { response: finalResult });
         }
-        if (request.options.throw.onServerErrorResponses && finalResult instanceof ServerErrorResponse) {
+        if (finalResult instanceof ServerErrorResponse) {
             throw new HttpServerError(response.statusText, { response: finalResult });
         }
 
