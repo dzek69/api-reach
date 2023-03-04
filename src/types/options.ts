@@ -26,6 +26,13 @@ interface TimeoutOptions {
 
 interface CacheOptions {
     storage: CacheInterface;
+    strategy: "load-only" | "save-only" | "load-and-save" | "no-cache"; // @TODO | "revalidate"
+    // todo this is wrong idea about how caches should work
+    /**
+     * A function that gets request data (method, url, query params etc.) and returns a key for the cache.
+     * If key is given and exists the value will be read from the cache and returned.
+     * If it returns `undefined`, the request will not be loaded from cache nor stored in the cache.
+     */
     key: CacheGetKey;
     shouldCacheResponse: CacheShouldCacheResponse;
 }

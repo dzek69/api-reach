@@ -404,7 +404,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
                                 ? new TimeoutError("Connection timed TODO", errorDetails)
                                 : new AbortError("Req abort", errorDetails);
 
-                            if (becauseOfTimeout) {
+                            if (timedoutGlobal) {
                                 // prevent more retries
                                 break;
                             }

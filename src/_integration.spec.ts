@@ -1,7 +1,6 @@
 import fastify from "fastify";
 import { wait } from "@ezez/utils";
-
-import type { HTTPBinAnythingResponse } from "../test/httpbinResponse";
+import must from "must";
 
 import { AbortError, HttpClientError, HttpError, HttpServerError, TimeoutError } from "./errors";
 
@@ -19,10 +18,10 @@ import {
 type ResponsesList = {
     "get": {
         "/anything/basic": {
-            response: HTTPBinAnythingResponse;
+            response: any;
         };
         "/anything/advanced": {
-            response: HTTPBinAnythingResponse;
+            response: any;
             body: never;
             query: {
                 page: number;
@@ -42,7 +41,7 @@ type ResponsesList = {
     };
     "post": {
         "/anything/advanced": {
-            response: HTTPBinAnythingResponse;
+            response: any;
             body: {
                 title: string;
             };
@@ -100,7 +99,6 @@ describe("api-reach", () => {
 
     afterEach(() => {
         if (mockHandlers.length) {
-            console.log("clearing leftovers");
             mockHandlers.length = 0;
             throw new Error("Not every expected call was made");
         }
@@ -125,19 +123,19 @@ describe("api-reach", () => {
         });
         const response = await localApi.get("/anything/advanced");
         const body = response.body;
-        body.status.must.equal("ok");
+        must(body.status).equal("ok");
     });
 
     describe("creates proper instance", () => {
         it("for success response", async () => {
             registerMock(() => async (req, res) => res.send({}));
             const response = await localApi.get("/");
-            response.must.not.be.instanceof(InformationalResponse);
-            response.must.be.instanceof(SuccessResponse);
-            response.must.not.be.instanceof(RedirectResponse);
-            response.must.not.be.instanceof(ClientErrorResponse);
-            response.must.not.be.instanceof(ServerErrorResponse);
-            response.must.not.be.instanceof(AbortedResponse);
+            must(response).not.be.instanceof(InformationalResponse);
+            must(response).be.instanceof(SuccessResponse);
+            must(response).not.be.instanceof(RedirectResponse);
+            must(response).not.be.instanceof(ClientErrorResponse);
+            must(response).not.be.instanceof(ServerErrorResponse);
+            must(response).not.be.instanceof(AbortedResponse);
         });
 
         it.skip("for informational response", async () => {
@@ -151,12 +149,12 @@ describe("api-reach", () => {
                         },
                     },
                 });
-            response.must.be.instanceof(InformationalResponse);
-            response.must.not.be.instanceof(SuccessResponse);
-            response.must.not.be.instanceof(RedirectResponse);
-            response.must.not.be.instanceof(ClientErrorResponse);
-            response.must.not.be.instanceof(ServerErrorResponse);
-            response.must.not.be.instanceof(AbortedResponse);
+            must(response).be.instanceof(InformationalResponse);
+            must(response).not.be.instanceof(SuccessResponse);
+            must(response).not.be.instanceof(RedirectResponse);
+            must(response).not.be.instanceof(ClientErrorResponse);
+            must(response).not.be.instanceof(ServerErrorResponse);
+            must(response).not.be.instanceof(AbortedResponse);
         });
 
         it("for redirect response", async () => {
@@ -167,12 +165,12 @@ describe("api-reach", () => {
                 },
                 responseType: "text",
             });
-            response.must.not.be.instanceof(InformationalResponse);
-            response.must.not.be.instanceof(SuccessResponse);
-            response.must.be.instanceof(RedirectResponse);
-            response.must.not.be.instanceof(ClientErrorResponse);
-            response.must.not.be.instanceof(ServerErrorResponse);
-            response.must.not.be.instanceof(AbortedResponse);
+            must(response).not.be.instanceof(InformationalResponse);
+            must(response).not.be.instanceof(SuccessResponse);
+            must(response).be.instanceof(RedirectResponse);
+            must(response).not.be.instanceof(ClientErrorResponse);
+            must(response).not.be.instanceof(ServerErrorResponse);
+            must(response).not.be.instanceof(AbortedResponse);
         });
 
         it("for client error response", async () => {
@@ -183,12 +181,12 @@ describe("api-reach", () => {
                     onClientErrorResponses: false,
                 },
             });
-            response.must.not.be.instanceof(InformationalResponse);
-            response.must.not.be.instanceof(SuccessResponse);
-            response.must.not.be.instanceof(RedirectResponse);
-            response.must.be.instanceof(ClientErrorResponse);
-            response.must.not.be.instanceof(ServerErrorResponse);
-            response.must.not.be.instanceof(AbortedResponse);
+            must(response).not.be.instanceof(InformationalResponse);
+            must(response).not.be.instanceof(SuccessResponse);
+            must(response).not.be.instanceof(RedirectResponse);
+            must(response).be.instanceof(ClientErrorResponse);
+            must(response).not.be.instanceof(ServerErrorResponse);
+            must(response).not.be.instanceof(AbortedResponse);
         });
 
         it("for server error response", async () => {
@@ -199,14 +197,14 @@ describe("api-reach", () => {
                     onClientErrorResponses: false,
                 },
             });
-            response.must.not.be.instanceof(InformationalResponse);
-            response.must.not.be.instanceof(SuccessResponse);
-            response.must.not.be.instanceof(RedirectResponse);
-            response.must.not.be.instanceof(ClientErrorResponse);
-            response.must.be.instanceof(ServerErrorResponse);
-            response.must.not.be.instanceof(AbortedResponse);
+            must(response).not.be.instanceof(InformationalResponse);
+            must(response).not.be.instanceof(SuccessResponse);
+            must(response).not.be.instanceof(RedirectResponse);
+            must(response).not.be.instanceof(ClientErrorResponse);
+            must(response).be.instanceof(ServerErrorResponse);
+            must(response).not.be.instanceof(AbortedResponse);
 
-            response.body.expected.must.equal(500); // just to make sure this wasn't random crash
+            must(response.body.expected).equal(500); // just to make sure this wasn't random crash
         });
 
         it("for aborted response", async () => {
@@ -218,9 +216,9 @@ describe("api-reach", () => {
                 throw new Error("Expected error to be thrown");
             }, (e: unknown) => {
                 must(e).be.instanceof(AbortError);
-                e.message.must.equal("Req abort");
-                e.details.while.must.equal("connection");
-                e.details.tries.must.equal(1);
+                must(e.message).equal("Req abort");
+                must(e.details.while).equal("connection");
+                must(e.details.tries).equal(1);
             });
 
             await wait(100);
@@ -495,7 +493,7 @@ describe("api-reach", () => {
             mockHandlers.length.must.equal(0);
         });
 
-        it("basic 2", async () => {
+        it("basic that does not end with success", async () => {
             registerMock(() => (req, res) => {
                 res.status(404).send({ error: "Not found" });
             });
@@ -518,7 +516,7 @@ describe("api-reach", () => {
 
     describe("supports timeouts", () => {
         it("should support single try timeout", async () => {
-            registerMock(() => (req, res) => setTimeout(() => res.send({}), 3000));
+            registerMock(() => (req, res) => setTimeout(() => res.send({}), 400));
 
             const req = localApi.get("/anything/basic", undefined, {
                 timeout: 300,
@@ -528,6 +526,38 @@ describe("api-reach", () => {
             }, (e) => {
                 must(e).be.instanceof(TimeoutError);
                 e.message.must.equal("Connection timed TODO");
+            });
+        });
+
+        it("should support multiple tries timeout", async () => {
+            registerMock(() => (req, res) => setTimeout(() => res.send({}), 400));
+            registerMock(() => (req, res) => setTimeout(() => res.send({}), 400));
+            registerMock(() => (req, res) => setTimeout(() => res.send({ ok: true }), 100));
+
+            const response = await localApi.get("/anything/basic", undefined, {
+                timeout: 300,
+                retry: 2,
+            });
+            must(response.body.ok).equal(true);
+        });
+
+        it("should support global timeout", async () => {
+            registerMock(() => (req, res) => setTimeout(() => res.send({}), 400));
+            registerMock(() => (req, res) => setTimeout(() => res.send({}), 400));
+            registerMock(() => (req, res) => setTimeout(() => res.send({ ok: true }), 100));
+
+            const request = localApi.get("/anything/basic", undefined, {
+                timeout: {
+                    single: 300,
+                    total: 666, // not enough for 3 tries
+                },
+                retry: 2,
+            });
+
+            await request.then(() => {
+                throw new Error("Expected error to be thrown");
+            }, (e) => {
+                must(e).be.instanceof(TimeoutError);
             });
         });
     });
