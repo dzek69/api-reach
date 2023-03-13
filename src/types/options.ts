@@ -1,7 +1,7 @@
 import type { RequestRedirect as NodeFetchRequestRedirect } from "node-fetch";
 import type { ExpectedResponseBodyType, RequestBodyType } from "../const";
 import type { GenericHeaders } from "./common";
-import type { CacheGetKey, CacheInterface, CacheShouldCacheResponse } from "./cache";
+import type { CacheGetKey, CacheGetTTL, CacheInterface, CacheShouldCacheResponse, CacheStrategy } from "./cache";
 
 interface RetryInfo {
     tryNo: number;
@@ -26,15 +26,15 @@ interface TimeoutOptions {
 
 interface CacheOptions {
     storage: CacheInterface;
-    strategy: "load-only" | "save-only" | "load-and-save" | "no-cache"; // @TODO | "revalidate"
-    // todo this is wrong idea about how caches should work
+    strategy: CacheStrategy;
     /**
      * A function that gets request data (method, url, query params etc.) and returns a key for the cache.
      * If key is given and exists the value will be read from the cache and returned.
      * If it returns `undefined`, the request will not be loaded from cache nor stored in the cache.
      */
-    key: CacheGetKey;
-    shouldCacheResponse: CacheShouldCacheResponse;
+    key: CacheGetKey | string;
+    ttl: CacheGetTTL | number;
+    shouldCacheResponse: CacheShouldCacheResponse | boolean;
 }
 
 /**
@@ -60,10 +60,11 @@ interface Options<RT extends ExpectedResponseBodyType, H extends GenericHeaders>
 /**
  * Options, but for given request. It skips fetch options headers, because they are passed with the `data` argument.
  */
-type RequestOptions<RT extends ExpectedResponseBodyType, H extends GenericHeaders> = Options<RT, H> & {
+type RequestOptions<RT extends ExpectedResponseBodyType, H extends GenericHeaders> = Omit<Options<RT, H>, "cache"> & {
     fetchOptions?: Options<RT, H>["fetchOptions"] & {
         headers?: never;
     };
+    cache?: Partial<Options<RT, H>["cache"]>;
 };
 
 /**
@@ -91,6 +92,7 @@ interface ApiClientConfig {
 
 export type {
     Options,
+    CacheOptions,
     RequestOptions,
     FinalOptions,
     ApiClientConfig,

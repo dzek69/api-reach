@@ -26,7 +26,7 @@ type ApiEndpoints = Record<string, Record<string, {
      */
     params?: GenericParams;
     /**
-     * Body data type
+     * Request body data type
      */
     body?: GenericBody;
     bodyType?: RequestBodyType;

@@ -51,16 +51,19 @@ class ApiResponse<
      *
      * It will be a forced string if request return type mismatch happened!
      */
-    public readonly body: RB | undefined;
+    public readonly body: RB;
+
+    public readonly cached: boolean = false;
 
     // @TODO type?
 
-    public constructor(data: ApiResponseData<Mthd, U, P, B, BT, Q, H, RB, RT>) {
+    public constructor(data: ApiResponseData<Mthd, U, P, B, BT, Q, H, RB, RT>, cached: boolean = false) {
         this.status = data.status;
         this.statusText = data.statusText;
         this.headers = data.headers;
         this.request = data.request;
         this.body = data.body;
+        this.cached = cached;
     }
 }
 
@@ -118,25 +121,25 @@ const createResponse = <
     BT extends RequestBodyType | undefined, Q extends GenericQuery,
     H extends GenericHeaders, RB extends GenericJSONResponse | string,
     RT extends ExpectedResponseBodyType,
->(data: ApiResponseData<Mthd, U, P, B, BT, Q, H, RB, RT>) => {
+>(data: ApiResponseData<Mthd, U, P, B, BT, Q, H, RB, RT>, cached = false) => {
     const responseType = matchStatus(data.status);
     if (responseType === ResponseStatusGroup.Informational) {
-        return new InformationalResponse(data);
+        return new InformationalResponse(data, cached);
     }
     if (responseType === ResponseStatusGroup.Success) {
-        return new SuccessResponse(data);
+        return new SuccessResponse(data, cached);
     }
     if (responseType === ResponseStatusGroup.Redirect) {
-        return new RedirectResponse(data);
+        return new RedirectResponse(data, cached);
     }
     if (responseType === ResponseStatusGroup.ClientError) {
-        return new ClientErrorResponse(data);
+        return new ClientErrorResponse(data, cached);
     }
     if (responseType === ResponseStatusGroup.ServerError) {
-        return new ServerErrorResponse(data);
+        return new ServerErrorResponse(data, cached);
     }
 
-    return new AbortedResponse(data);
+    return new AbortedResponse(data, cached);
 };
 
 export {

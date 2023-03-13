@@ -2,13 +2,13 @@
 import urlJoin from "url-join";
 import qs from "qs";
 import { Timeout } from "oop-timers";
-import { noop, omit, wait } from "@ezez/utils";
+import { noop, omit, pick, wait } from "@ezez/utils";
 
 import type FetchType from "node-fetch";
 import type {
     AbortablePromise,
     ApiClientConfig,
-    ApiEndpoints,
+    ApiEndpoints, CachedData, CacheOptions,
     FinalOptions,
     GenericBody,
     GenericHeaders, GenericParams, GenericQuery,
@@ -20,7 +20,10 @@ import type { ApiResponse } from "./response/response.js";
 
 import { ClientErrorResponse, ServerErrorResponse, createResponse } from "./response/response.js";
 import { contentTypeMap, ExpectedResponseBodyType, RequestBodyType } from "./const.js";
-import { AbortError, TimeoutError, UnknownError, ResponseDataTypeMismatchError, HttpClientError, HttpServerError } from "./errors.js";
+import {
+    AbortError, TimeoutError, UnknownError, ResponseDataTypeMismatchError, HttpClientError, HttpServerError,
+    HttpError,
+} from "./errors.js";
 import { ApiRequest } from "./request/request.js";
 
 const defaultOptions: Pick<
@@ -106,6 +109,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
         return null;
     }
 
+    // eslint-disable-next-line max-lines-per-function,max-statements
     private _buildFetchOptions<
         RT extends ExpectedResponseBodyType,
         H extends GenericHeaders,
@@ -129,6 +133,11 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
         }
 
         const retry = options.retry ?? this._options.retry ?? defaultOptions.retry;
+
+        let cache: Partial<CacheOptions> | undefined = { ...this._options.cache, ...options.cache };
+        if (!cache.storage) {
+            cache = undefined;
+        }
 
         const opts: FinalOptions<ExpectedResponseBodyType, NonNullable<GenericHeaders>> = {
             // @TODO filter only known options?
@@ -155,6 +164,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
                     return retry.interval({ tryNo });
                 },
             },
+            ...(cache ? { cache: cache as CacheOptions } : undefined),
             fetchOptions: {
                 ...this._options.fetchOptions,
                 ...options.fetchOptions,
@@ -241,13 +251,13 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
         Q extends RL["get"][U]["query"],
         H extends RL["get"][U]["headers"],
         D extends RequestData<P, B, BT, Q, H>,
-        RB extends RL[Lowercase<"get">][U]["response"],
+        RB extends RL["get"][U]["response"],
         RT extends ExpectedResponseBodyType = T,
     >(
         url: U, data?: D, options?: RequestOptions<RT, H>,
     ): AbortablePromise<T extends ExpectedResponseBodyType.json
             ? ApiResponse<"get", U, P, B, BT, Q, H, RB, RT>
-            : ApiResponse<"get", U, P, string, BT, Q, H, RB, RT>> {
+            : ApiResponse<"get", U, P, B, BT, Q, H, string, RT>> {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return this.request("GET", url, data, options) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     }
@@ -260,57 +270,48 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
         Q extends RL["post"][U]["query"],
         H extends RL["post"][U]["headers"],
         D extends RequestData<P, B, BT, Q, H>,
-        RB extends RL[Lowercase<"post">][U]["response"],
+        RB extends RL["post"][U]["response"],
         RT extends ExpectedResponseBodyType = T,
     >(
         url: U, data?: D, options?: RequestOptions<RT, H>,
     ): AbortablePromise<T extends ExpectedResponseBodyType.json
             ? ApiResponse<"post", U, P, B, BT, Q, H, RB, RT>
-            : ApiResponse<"post", U, P, string, BT, Q, H, RB, RT>> {
+            : ApiResponse<"post", U, P, B, BT, Q, H, string, RT>> {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return,max-len
         return this.request("POST", url, data, options) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     }
 
     public request<
         Mthd extends string,
-        U extends keyof RL[Lowercase<Mthd>] & string,
-        P extends RL[Lowercase<Mthd>][U]["params"],
-        B extends RL[Lowercase<Mthd>][U]["body"],
-        BT extends RL[Lowercase<Mthd>][U]["bodyType"],
-        Q extends RL[Lowercase<Mthd>][U]["query"],
-        H extends RL[Lowercase<Mthd>][U]["headers"],
+        U extends keyof RL[Uppercase<Mthd>] & string,
+        P extends RL[Uppercase<Mthd>][U]["params"],
+        B extends RL[Uppercase<Mthd>][U]["body"],
+        BT extends RL[Uppercase<Mthd>][U]["bodyType"],
+        Q extends RL[Uppercase<Mthd>][U]["query"],
+        H extends RL[Uppercase<Mthd>][U]["headers"],
         D extends RequestData<P, B, BT, Q, H>,
-        RB extends RL[Lowercase<Mthd>][U]["response"],
+        RB extends RL[Uppercase<Mthd>][U]["response"],
         RT extends ExpectedResponseBodyType = T,
     >(
         method: Mthd, url: U, data?: D, options?: RequestOptions<RT, H>,
     ): AbortablePromise<RT extends ExpectedResponseBodyType.json
             ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>
             : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>> {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return this._prepareAndSendRequest(method, url, data, options).catch((e) => {
-            if (e instanceof HttpClientError && !e.details?.response.request.options.throw.onClientErrorResponses) {
-                return e.details?.response;
-            }
-            if (e instanceof HttpServerError && !e.details?.response.request.options.throw.onServerErrorResponses) {
-                return e.details?.response;
-            }
-            // eslint-disable-next-line @typescript-eslint/no-throw-literal
-            throw e;
-        }) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return,@typescript-eslint/no-explicit-any
+        return this._prepareAndSendRequest(method, url, data, options) as any;
     }
 
     // eslint-disable-next-line max-lines-per-function
     private _prepareAndSendRequest<
         Mthd extends string,
-        U extends keyof RL[Lowercase<Mthd>] & string,
-        P extends RL[Lowercase<Mthd>][U]["params"],
-        B extends RL[Lowercase<Mthd>][U]["body"],
-        BT extends RL[Lowercase<Mthd>][U]["bodyType"],
-        Q extends RL[Lowercase<Mthd>][U]["query"],
-        H extends RL[Lowercase<Mthd>][U]["headers"],
+        U extends keyof RL[Uppercase<Mthd>] & string,
+        P extends RL[Uppercase<Mthd>][U]["params"],
+        B extends RL[Uppercase<Mthd>][U]["body"],
+        BT extends RL[Uppercase<Mthd>][U]["bodyType"],
+        Q extends RL[Uppercase<Mthd>][U]["query"],
+        H extends RL[Uppercase<Mthd>][U]["headers"],
         D extends RequestData<P, B, BT, Q, H>,
-        RB extends RL[Lowercase<Mthd>][U]["response"],
+        RB extends RL[Uppercase<Mthd>][U]["response"],
         RT extends ExpectedResponseBodyType = T,
     >(
         method: Mthd, url: U, data?: D, options?: RequestOptions<RT, H>,
@@ -324,9 +325,9 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
             : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>;
 
         const start = Date.now();
-        const finalOptions = this._buildFetchOptions(options ?? {}, method, data?.body, data?.headers);
+        const finalOptions = this._buildFetchOptions(options ?? {}, method.toUpperCase(), data?.body, data?.headers);
         const finalUrl = this._buildUrl(url, data?.params, data?.query, finalOptions);
-        const request = new ApiRequest(method, { url: url, fullUrl: finalUrl }, data, finalOptions);
+        const request = new ApiRequest(method.toUpperCase(), { url: url, fullUrl: finalUrl }, data, finalOptions);
 
         let cacheKey: string | undefined = undefined,
             currentController: AbortController | undefined = undefined,
@@ -349,11 +350,31 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
             // eslint-disable-next-line max-statements
             (async () => {
                 // @TODO skip cache stuff on retry
-                if (finalOptions.cache) {
-                    cacheKey = finalOptions.cache.key();
+                if (finalOptions.cache?.key) {
+                    cacheKey = typeof finalOptions.cache.key === "string"
+                        ? finalOptions.cache.key
+                        : finalOptions.cache.key({
+                            ...pick(request, [
+                                "method", "url", "fullUrl", "body", "headers", "params", "query", "bodyType",
+                            ]),
+                            options: pick(request.options, [
+                                "responseType", "base", "fetchOptions",
+                            ]),
+                        });
+
                     if (cacheKey) {
-                        // @TODO implement cache
-                        throw new Error("Not implemented");
+                        const cachedData = await finalOptions.cache.storage.get(cacheKey);
+                        if (cachedData) {
+                            const d = JSON.parse(cachedData) as CachedData;
+
+                            // eslint-disable-next-line @typescript-eslint/return-await
+                            return await this._buildResponse(request, {
+                                status: d.status,
+                                statusText: d.statusText,
+                                bodyText: d.body,
+                                headers: d.headers,
+                            }, true);
+                        }
                     }
                 }
 
@@ -417,25 +438,49 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
                     }
                 }
                 throw lastError ? lastError : new Error("No error??"); // @TODO what to do? is this possible?
-            })().then(resp => {
+            })().then(async (resp) => {
                 // @TODO add option to wait for cache before resolving
+                if (cacheKey) {
+                    const shouldCache = finalOptions.cache?.shouldCacheResponse;
+                    if (shouldCache) {
+                        const sc = typeof shouldCache === "function" ? shouldCache(resp) : shouldCache;
+                        if (sc) {
+                            await finalOptions.cache!.storage.set(cacheKey, JSON.stringify({
+                                ...pick(resp, ["status", "statusText", "headers"]),
+                                body: typeof resp.body === "string" ? resp.body : JSON.stringify(resp.body),
+                            })).catch(console.error); // @TODO
+                        }
+                    }
+                }
                 resolve(resp);
-                if (!cacheKey) {
+            }, async (e: unknown) => {
+                if (cacheKey && e instanceof HttpError) {
+                    const shouldCache = finalOptions.cache?.shouldCacheResponse;
+                    const resp = e.details?.response;
+                    if (shouldCache && resp) {
+                        const sc = typeof shouldCache === "function" ? shouldCache(resp) : shouldCache;
+                        if (sc) {
+                            await finalOptions.cache!.storage.set(cacheKey, JSON.stringify({
+                                ...pick(resp, ["status", "statusText", "headers"]),
+                                body: typeof resp.body === "string" ? resp.body : JSON.stringify(resp.body),
+                            })).catch(console.error); // @TODO
+                        }
+                    }
+                }
+
+                if (e instanceof HttpClientError
+                    && e.details && !e.details.response.request.options.throw.onClientErrorResponses) {
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+                    resolve(e.details.response as any);
                     return;
                 }
-                if (finalOptions.cache?.shouldCacheResponse()) {
-                    // @TODO implement cache
-                    throw new Error("Not implemented");
-                }
-            }, (err: unknown) => {
-                reject(UnknownError.normalize(err));
-                if (!cacheKey) {
+                if (e instanceof HttpServerError
+                    && e.details && !e.details.response.request.options.throw.onServerErrorResponses) {
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+                    resolve(e.details.response as any);
                     return;
                 }
-                if (finalOptions.cache?.shouldCacheResponse()) {
-                    // @TODO implement cache
-                    throw new Error("Not implemented");
-                }
+                reject(UnknownError.normalize(e));
             });
         });
 
@@ -461,16 +506,15 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
         return future as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     }
 
-    // eslint-disable-next-line max-statements,max-lines-per-function
     private async _sendRequest<
         Mthd extends string,
-        U extends keyof RL[Lowercase<Mthd>] & string,
-        P extends RL[Lowercase<Mthd>][U]["params"],
-        B extends RL[Lowercase<Mthd>][U]["body"],
-        BT extends RL[Lowercase<Mthd>][U]["bodyType"],
-        Q extends RL[Lowercase<Mthd>][U]["query"],
-        H extends RL[Lowercase<Mthd>][U]["headers"],
-        RB extends RL[Lowercase<Mthd>][U]["response"],
+        U extends keyof RL[Uppercase<Mthd>] & string,
+        P extends RL[Uppercase<Mthd>][U]["params"],
+        B extends RL[Uppercase<Mthd>][U]["body"],
+        BT extends RL[Uppercase<Mthd>][U]["bodyType"],
+        Q extends RL[Uppercase<Mthd>][U]["query"],
+        H extends RL[Uppercase<Mthd>][U]["headers"],
+        RB extends RL[Uppercase<Mthd>][U]["response"],
         AReq extends ApiRequest<Mthd, U, P, B, BT, Q, H, RT>,
         RT extends ExpectedResponseBodyType = T,
     >(request: AReq, signal: AbortSignal): Promise<RT extends ExpectedResponseBodyType.json
@@ -484,12 +528,40 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
             signal,
         });
         const bodyText = (await response.text());
+
+        return this._buildResponse(request, {
+            bodyText: bodyText,
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+        });
+    }
+
+    private _buildResponse<
+        Mthd extends string,
+        U extends keyof RL[Uppercase<Mthd>] & string,
+        P extends RL[Uppercase<Mthd>][U]["params"],
+        B extends RL[Uppercase<Mthd>][U]["body"],
+        BT extends RL[Uppercase<Mthd>][U]["bodyType"],
+        Q extends RL[Uppercase<Mthd>][U]["query"],
+        H extends RL[Uppercase<Mthd>][U]["headers"],
+        RB extends RL[Uppercase<Mthd>][U]["response"],
+        AReq extends ApiRequest<Mthd, U, P, B, BT, Q, H, RT>,
+        RT extends ExpectedResponseBodyType = T,
+    >(request: AReq, response: {
+        bodyText: string;
+        status: number;
+        statusText: string;
+        headers: H;
+    }, cached = false): Promise<RT extends ExpectedResponseBodyType.json
+            ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>
+            : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>> {
         let jsonData: RB | undefined;
 
         const jsonWanted = request.options.responseType === ExpectedResponseBodyType.json;
         if (jsonWanted) {
             try {
-                jsonData = JSON.parse(bodyText) as RB;
+                jsonData = JSON.parse(response.bodyText) as RB;
             }
             catch {}
         }
@@ -500,9 +572,9 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
             status: response.status,
             statusText: response.statusText,
             request: request,
-            body: jsonData ?? bodyText,
-            headers: Object.fromEntries(response.headers.entries()),
-        });
+            body: jsonData ?? response.bodyText,
+            headers: response.headers,
+        }, cached);
 
         if (typeMismatch) {
             throw new ResponseDataTypeMismatchError("Server returned data in unexpected format", {

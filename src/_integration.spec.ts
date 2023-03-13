@@ -1,6 +1,9 @@
 import fastify from "fastify";
-import { wait } from "@ezez/utils";
+import { noop, wait } from "@ezez/utils";
 import must from "must";
+import Keyv from "keyv";
+
+import type { CacheInterface } from "./types/cache";
 
 import { AbortError, HttpClientError, HttpError, HttpServerError, TimeoutError } from "./errors";
 
@@ -561,6 +564,199 @@ describe("api-reach", () => {
             });
         });
     });
+
+    describe("supports caching", () => {
+        it("basic cache", async () => {
+            registerMock(() => (req, res) => res.send({ ok: true }));
+
+            const cache = new Keyv() as CacheInterface;
+            const response = await localApi.get("/anything/basic", undefined, {
+                cache: {
+                    storage: cache,
+                    key: "x",
+                    shouldCacheResponse: true,
+                },
+            });
+
+            response.body.ok.must.equal(true);
+            response.cached.must.equal(false);
+
+            const response2 = await localApi.get("/anything/basic", undefined, {
+                cache: {
+                    storage: cache,
+                    key: "x",
+                    shouldCacheResponse: true,
+                },
+            });
+
+            response2.body.ok.must.equal(true);
+            response2.cached.must.equal(true);
+        });
+
+        it("throws proper error if error was cached", async () => {
+            registerMock(() => (req, res) => res.status(404).send({ error: "NF" }));
+
+            const cache = new Keyv() as CacheInterface;
+            await localApi.get("/anything/basic", undefined, {
+                cache: {
+                    storage: cache,
+                    key: "x",
+                    shouldCacheResponse: true,
+                },
+            }).then(() => {
+                throw new Error("Expected error to be thrown");
+            }, noop);
+
+            const request2 = localApi.get("/anything/basic", undefined, {
+                cache: {
+                    storage: cache,
+                    key: "x",
+                    shouldCacheResponse: true,
+                },
+            });
+
+            await request2.then(() => {
+                throw new Error("Expected error to be thrown");
+            }, (e) => {
+                must(e).be.instanceof(HttpClientError);
+                const err = e as unknown as HttpClientError;
+                err.details?.response.body.must.eql({ error: "NF" });
+            });
+        });
+
+        it("throws the error when error is cached and "
+            + "first request asked to resolve with error, but 2nd asked to throw", async () => {
+            registerMock(() => (req, res) => res.status(404).send({ error: "NF" }));
+
+            const cache = new Keyv() as CacheInterface;
+            await localApi.get("/anything/basic", undefined, {
+                cache: {
+                    storage: cache,
+                    key: "x",
+                    shouldCacheResponse: true,
+                },
+                throw: {
+                    onClientErrorResponses: false,
+                },
+            });
+
+            const request2 = localApi.get("/anything/basic", undefined, {
+                cache: {
+                    storage: cache,
+                    key: "x",
+                    shouldCacheResponse: true,
+                },
+                throw: {
+                    onClientErrorResponses: true,
+                },
+            });
+
+            await request2.then(() => {
+                throw new Error("Expected error to be thrown");
+            }, (e) => {
+                must(e).be.instanceof(HttpClientError);
+            });
+        });
+
+        describe("with dynamic cache key", () => {
+            it("should differentiate responses correctly", async () => {
+                const cache = new Keyv() as CacheInterface;
+
+                registerMock((req) => {
+                    if (req.method === "GET" && req.url === "/anything/advanced") {
+                        return (_, res) => {
+                            res.send({ route: "advanced" });
+                        };
+                    }
+                    return null;
+                });
+
+                registerMock((req) => {
+                    if (req.method === "GET" && req.url === "/anything/basic") {
+                        return (_, res) => {
+                            res.send({ route: "basic" });
+                        };
+                    }
+                    return null;
+                });
+
+                const cachedApi = createApiClient<ResponsesList>({
+                    base: "http://127.0.0.1:9192",
+                    cache: {
+                        storage: cache,
+                        key: (req) => req.url,
+                        shouldCacheResponse: true,
+                    },
+                });
+
+                const res1 = await cachedApi.get("/anything/advanced");
+                res1.body.route.must.equal("advanced");
+                res1.cached.must.equal(false);
+                const res2 = await cachedApi.get("/anything/basic");
+                res2.body.route.must.equal("basic");
+                res2.cached.must.equal(false);
+                const res3 = await cachedApi.get("/anything/advanced");
+                res3.body.route.must.equal("advanced");
+                res3.cached.must.equal(true);
+                const res4 = await cachedApi.get("/anything/basic");
+                res4.body.route.must.equal("basic");
+                res4.cached.must.equal(true);
+            });
+
+            it("should call key function with request data", async () => {
+                const cache = new Keyv() as CacheInterface;
+
+                registerMock((req) => (_, res) => { res.send({ route: req.url }); });
+
+                const keyFn = jest.fn().mockImplementation((req) => req.url);
+
+                const cachedApi = createApiClient<ResponsesList>({
+                    base: "http://127.0.0.1:9192",
+                    cache: {
+                        storage: cache,
+                        key: keyFn,
+                        shouldCacheResponse: true,
+                    },
+                });
+
+                await cachedApi.post("/whatever", {
+                    query: { a: 1 },
+                    body: { b: 2 },
+                    headers: { c: 3 },
+                    params: { d: 4 },
+                    bodyType: "json",
+                });
+
+                must(keyFn.mock.calls).have.length(1);
+                must(keyFn.mock.calls[0]).eql([
+                    {
+                        query: { a: 1 },
+                        body: { b: 2 },
+                        headers: { c: 3 },
+                        params: { d: 4 },
+                        bodyType: "json",
+                        method: "POST",
+                        fullUrl: "http://127.0.0.1:9192/whatever?a=1",
+                        url: "/whatever",
+                        options: {
+                            base: "http://127.0.0.1:9192",
+                            responseType: "json",
+                            fetchOptions: {
+                                body: "{\"b\":2}",
+                                headers: {
+                                    "Content-Type": "application/json; charset=utf-8",
+                                    "c": 3,
+                                },
+                                method: "POST",
+                            },
+                        },
+                    },
+                ]);
+            });
+        });
+    });
+
+    // TODO cache strategy & ttl
 
     // TODO: test upper casing method? does it matter? httpbin always upper case it
     // TODO httpbin will cry on lower case patch, but it always returns uppercased method

@@ -59,6 +59,10 @@ class ApiRequest<
 
     // @TODO body after stringifying?
 
+    // @TODO body type is stored on the request directly
+    // but it's in the options as well
+    // what about response type?
+    // it can be useful to get it outside too (for cache key functions for example)
     public constructor(
         method: Mthd, { url, fullUrl }: { url: U; fullUrl: string },
         data: RequestData<P, B, BT, Q, H> | undefined, options: FinalOptions<RT, GenericHeaders>,
