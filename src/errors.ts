@@ -7,11 +7,13 @@ import type { ExpectedResponseBodyType, RequestBodyType } from "./const";
 import type { ApiResponse } from "./response/response";
 
 type BasicErrorDetails<
-    Mthd extends string, U extends string,
-    P extends GenericParams, B extends GenericBody,
-    BT extends RequestBodyType | undefined, Q extends GenericQuery,
-    H extends GenericHeaders, RB extends GenericJSONResponse | string,
-    RT extends ExpectedResponseBodyType,
+    Mthd extends string = string, U extends string = string,
+    P extends GenericParams = GenericParams, B extends GenericBody = GenericBody,
+    BT extends RequestBodyType | undefined = RequestBodyType | undefined,
+    Q extends GenericQuery = GenericQuery,
+    H extends GenericHeaders = GenericHeaders,
+    RB extends GenericJSONResponse | string = GenericJSONResponse | string,
+    RT extends ExpectedResponseBodyType = ExpectedResponseBodyType,
 > = {
     response: ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>;
 };
@@ -48,9 +50,7 @@ type TimeoutError = ReturnType<typeof TimeoutError>;
 /**
  * Generic HTTP error, will never be thrown directly
  */
-const HttpError = ApiReachError.extend<
-BasicErrorDetails<any, any, any, any, any, any, any, any, any>
->("HttpError");
+const HttpError = ApiReachError.extend<BasicErrorDetails>("HttpError");
 type HttpError = ReturnType<typeof HttpError>;
 
 /**
@@ -69,11 +69,9 @@ type HttpServerError = ReturnType<typeof HttpServerError>;
  * Error thrown when the response data type does not match the expected type
  * It's thrown even if the request is a success
  */
-const ResponseDataTypeMismatchError = createError<
-BasicErrorDetails<any, any, any, any, any, any, any, any, any> & {
+const ResponseDataTypeMismatchError = createError<BasicErrorDetails & {
     expectedType: ExpectedResponseBodyType;
-}
->("ResponseDataTypeMismatchError");
+}>("ResponseDataTypeMismatchError");
 type ResponseDataTypeMismatchError = ReturnType<typeof ResponseDataTypeMismatchError>;
 
 export type { AbortErrorDetails };
