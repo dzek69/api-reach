@@ -35,7 +35,7 @@
     "light-isomorphic-fetch": "^2.0.0-beta.3",
     "node-object-hash": "^2.3.2",
     "oop-timers": "^4.0.1",
-    "qs": "^6.9.6",
+    "qs": "^6.9.7",
     "url-join": "^4.0.1"
   },
   "devDependencies": {
