@@ -1504,15 +1504,15 @@
   resolved "https://registry.npmjs.org/@eslint/js/-/js-8.38.0.tgz#73a8a0d8aa8a8e6fe270431c5e72ae91b5337892"
   integrity sha512-IoD2MfUnOV58ghIHCiil01PcohxjbYR/qCxsoC+xNgUwh1EY8jOOrYmu3d3a71+tJJ23uscEV4X2HJWMsPJu4g==
 
-"@ezez/errors@^6.0.0-beta.1":
-  version "6.0.0-beta.1"
-  resolved "https://registry.npmjs.org/@ezez/errors/-/errors-6.0.0-beta.1.tgz#34c52d59adf21c1d94176b9cc861c19caa6671ca"
-  integrity sha512-ahVJuG4okn68tHtJ0D4Vm3w705t5GE7hH4t+2vOGVjseIl/BrdccJ21gMqLBf3iO8vd3Md5DrAzWK+U2O+ihKg==
+"@ezez/errors@^6.0.0":
+  version "6.0.1"
+  resolved "https://registry.yarnpkg.com/@ezez/errors/-/errors-6.0.1.tgz#621591034bd7c946f80c0d53697c514e064a0dd7"
+  integrity sha512-bYzNSDesjYFdTPDvesv67hMuPFEadYZ2M7/BbMU6eb3jN/WFNCZGROxAMx4XPC6jr377X3rCpf0Bizn1kGLxbg==
 
-"@ezez/utils@^1.1.0":
-  version "1.1.0"
-  resolved "https://registry.npmjs.org/@ezez/utils/-/utils-1.1.0.tgz#add882a5e270795441070d06741bba162155fcff"
-  integrity sha512-tcg4w4yYThskiWxXrkktSWFNSC6Q2fEAEGOSUjRyZojyPOiOxLe75j5sdERbGAOAodrgNopgfcr/SwMqBUf15g==
+"@ezez/utils@^1.8.1":
+  version "1.8.1"
+  resolved "https://registry.yarnpkg.com/@ezez/utils/-/utils-1.8.1.tgz#84bb3c3e14c623c6ae9659f568d8e691eb52a0bc"
+  integrity sha512-mogYkxnm/RBxr4dGtuCODevRzpRASt24W/M3PY281olP6SaozcwIb2c0vzUsk4wicf2xiudXepuZwqzsWLiXQQ==
 
 "@fastify/ajv-compiler@^3.3.1":
   version "3.5.0"
@@ -4658,10 +4658,10 @@ onetime@^5.1.2:
   resolved "https://registry.npmjs.org/oolong/-/oolong-1.15.1.tgz#90bac9e7ce52f60906ab2228d9e2b115f1086cea"
   integrity sha1-kLrJ585S9gkGqyIo2eKxFfEIbOo=
 
-oop-timers@^4.0.1:
-  version "4.0.1"
-  resolved "https://registry.npmjs.org/oop-timers/-/oop-timers-4.0.1.tgz#b725d080f2de6a98ca9d2338e2b4eb7b6c8cc2cf"
-  integrity sha512-2fms3Sz6+R/euNmjPdgeklQmBqcAJ7ws/yMUbhjkh4dLqK5B/Jhs2t9hm5OguX1J8LDwK6howdYU+/zEyfQXWA==
+oop-timers@^5.0.0:
+  version "5.0.0"
+  resolved "https://registry.yarnpkg.com/oop-timers/-/oop-timers-5.0.0.tgz#636561abf2d2d5ed870b165e9c678cb01f7ce6d5"
+  integrity sha512-YXDS1v+9/yM6zTWowcrNaaVbe81fuGnpfT5fzkNwOq3/bdrO1lRzm++j6+blOBvWpSzbN4QSEkkmksk6dHUjfw==
 
 optionator@^0.9.1:
   version "0.9.1"

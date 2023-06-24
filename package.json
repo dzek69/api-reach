@@ -35,9 +35,9 @@
   "module": "./esm/index.js",
   "type": "module",
   "dependencies": {
-    "@ezez/errors": "^6.0.0-beta.1",
-    "@ezez/utils": "^1.1.0",
-    "oop-timers": "^4.0.1",
+    "@ezez/errors": "^6.0.0",
+    "@ezez/utils": "^1.8.1",
+    "oop-timers": "^5.0.0",
     "qs": "^6.11.0",
     "url-join": "^4.0.1"
   },

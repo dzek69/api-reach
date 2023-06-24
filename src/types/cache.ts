@@ -42,6 +42,13 @@ type CacheShouldCacheResponse = <
     RB extends (GenericJSONResponse | string), RT extends ExpectedResponseBodyType,
 >(response: ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>) => boolean;
 
+/**
+ * Strategy for loading data from cache.
+ * - `prefer-cache` - try to load data from cache, if it's not there, make a request
+ * - `prefer-request` - try to make a request, if it fails, try to load data from cache
+ * - `cache-only` - load data from cache, if it's not there, throw an error
+ * - `request-only` - make a request, if it fails, throw an error
+ */
 type CacheLoadStrategy = "prefer-cache" | "prefer-request" | "cache-only" | "request-only";
 type CacheSaveStrategy = "save" | "no-save";
 

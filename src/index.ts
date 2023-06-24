@@ -2,7 +2,7 @@
 import urlJoin from "url-join";
 import qs from "qs";
 import { Timeout } from "oop-timers";
-import { noop, omit, pick, wait } from "@ezez/utils";
+import { noop, omit, pick, replace, wait } from "@ezez/utils";
 
 import type FetchType from "node-fetch";
 import type {
@@ -33,6 +33,7 @@ import {
     ResponseDataTypeMismatchError,
     TimeoutError,
     UnknownError,
+    CacheMissError,
 } from "./errors.js";
 import { ApiRequest } from "./request/request.js";
 
@@ -265,15 +266,22 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
     private _buildUrl(
         givenUrl: string, params: GenericParams, query: GenericQuery, fetchOptions: FinalOptions<any, any>,
     ) {
-        // @FIXME support for params
-        const fullUrl = this._buildUrlBase(givenUrl, fetchOptions.base);
-        if (!query) {
+        const localUrl = replace(givenUrl, params as (Record<string, string> | undefined) ?? {});
+        const fullUrl = this._buildUrlBase(localUrl, fetchOptions.base);
+        if (!query || !Object.keys(query).length) {
             return fullUrl;
         }
         const hasQuery = fullUrl.includes("?");
         const appendChar = hasQuery ? "&" : "?";
         // @todo extract existing query params from string and include for stringify ?
         // @todo add support for string query params
+
+        if (hasQuery) {
+            console.warn(
+                "api-reach: query params object was given with url that already has query params. "
+                + "This behavior is unsupported and may lead to unexpected results.",
+            );
+        }
 
         return fullUrl + appendChar + qs.stringify(query); // @TODO use stringify from deps
     }
@@ -384,8 +392,8 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
 
             // eslint-disable-next-line max-statements
             (async () => {
-                // @TODO skip cache stuff on retry
-                if (finalOptions.cache?.key) {
+                if (tryNo === 0 && finalOptions.cache?.key) {
+                    // Calculate cache key to use when needed
                     cacheKey = typeof finalOptions.cache.key === "string"
                         ? finalOptions.cache.key
                         : finalOptions.cache.key({
@@ -396,9 +404,11 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
                                 "responseType", "base", "fetchOptions",
                             ]),
                         });
+                }
 
+                const readFromCache = async () => {
                     if (cacheKey) {
-                        const cachedData = await finalOptions.cache.storage.get(cacheKey);
+                        const cachedData = await finalOptions.cache!.storage.get(cacheKey);
                         if (cachedData) {
                             const d = JSON.parse(cachedData) as CachedData;
 
@@ -410,6 +420,18 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
                                 headers: d.headers,
                             }, true);
                         }
+                    }
+                    return null;
+                };
+
+                const loadStrat = finalOptions.cache?.loadStrategy;
+                if (loadStrat === "prefer-cache" || loadStrat === "cache-only") {
+                    const cachedResponse = await readFromCache();
+                    if (cachedResponse) {
+                        return cachedResponse;
+                    }
+                    if (loadStrat === "cache-only") {
+                        throw new CacheMissError("No cached data");
                     }
                 }
 
@@ -472,30 +494,42 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
                         singleTimeout.stop();
                     }
                 }
+
+                if (finalOptions.cache?.loadStrategy === "prefer-request") {
+                    const cachedResponse = await readFromCache();
+                    if (cachedResponse) {
+                        return cachedResponse;
+                    }
+                    throw lastError ? lastError : new Error("No error??"); // @TODO what to do? is this possible?
+                }
+
                 throw lastError ? lastError : new Error("No error??"); // @TODO what to do? is this possible?
             })().then(async (resp) => {
                 // @TODO add option to wait for cache before resolving
-                if (cacheKey) {
-                    const shouldCache = finalOptions.cache?.shouldCacheResponse;
+                if (cacheKey && !resp.cached) {
+                    const cacheOpt = finalOptions.cache!;
+                    const shouldCache = cacheOpt.shouldCacheResponse;
                     if (shouldCache) {
+                        const ttl = typeof cacheOpt.ttl === "function" ? cacheOpt.ttl(resp) : cacheOpt.ttl;
                         const sc = typeof shouldCache === "function" ? shouldCache(resp) : shouldCache;
                         if (sc) {
-                            await finalOptions.cache!.storage.set(cacheKey, JSON.stringify({
+                            await cacheOpt.storage.set(cacheKey, JSON.stringify({
                                 ...pick(resp, ["status", "statusText", "headers"]),
                                 body: typeof resp.body === "string" ? resp.body : JSON.stringify(resp.body),
-                            })).catch(console.error); // @TODO
+                            }), ttl).catch(console.error); // @TODO
                         }
                     }
                 }
                 resolve(resp);
             }, async (e: unknown) => {
                 if (cacheKey && e instanceof HttpError) {
-                    const shouldCache = finalOptions.cache?.shouldCacheResponse;
+                    const cacheOpt = finalOptions.cache!;
+                    const shouldCache = cacheOpt.shouldCacheResponse;
                     const resp = e.details?.response;
                     if (shouldCache && resp) {
                         const sc = typeof shouldCache === "function" ? shouldCache(resp) : shouldCache;
                         if (sc) {
-                            await finalOptions.cache!.storage.set(cacheKey, JSON.stringify({
+                            await cacheOpt.storage.set(cacheKey, JSON.stringify({
                                 ...pick(resp, ["status", "statusText", "headers"]),
                                 body: typeof resp.body === "string" ? resp.body : JSON.stringify(resp.body),
                             })).catch(console.error); // @TODO

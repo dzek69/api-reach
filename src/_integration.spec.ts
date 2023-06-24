@@ -6,7 +6,7 @@ import Keyv from "keyv";
 import type { CacheInterface } from "./types/cache";
 import type { RequestOptions } from "./types";
 
-import { AbortError, HttpClientError, HttpError, HttpServerError, TimeoutError } from "./errors";
+import { AbortError, CacheMissError, HttpClientError, HttpError, HttpServerError, TimeoutError } from "./errors";
 
 import {
     AbortedResponse,
@@ -38,6 +38,12 @@ type ResponsesList = {
             response: {
                 status: "users";
             };
+            params: {
+                id: number;
+            };
+        };
+        "/users/:id/delete/x-:id": {
+            response: Record<string, string>;
             params: {
                 id: number;
             };
@@ -497,7 +503,19 @@ describe("api-reach", () => {
             response.body.args.must.eql({ x: ["1", "4"], y: "2", z: "3" });
         });
 
-        // @TODO params :id test
+        it("should apply url (:id) params", async () => {
+            registerMock(() => (req, res) => res.send({
+                url: req.url,
+            }));
+
+            const response = await localApi.get("/users/:id/delete/x-:id", {
+                params: {
+                    ":id": 1,
+                },
+            });
+
+            response.body.url.must.equal("/users/1/delete/x-1");
+        });
 
         // TODO// @TODO test possibility to send body with get anyway + maybe do a configurable throw against that
     });
@@ -841,10 +859,190 @@ describe("api-reach", () => {
                 must(shouldFn.mock.calls[0][0]).eql(response);
             });
         });
+
+        it("supports ttl", async () => {
+            registerMock(() => (req, res) => res.send({ ok: true }));
+
+            const cache = new Keyv() as CacheInterface;
+            const response = await localApi.get("/anything/basic", undefined, {
+                cache: {
+                    storage: cache,
+                    key: "x",
+                    shouldCacheResponse: true,
+                    ttl: 1000,
+                },
+            });
+
+            response.body.ok.must.equal(true);
+            response.cached.must.equal(false);
+
+            const response2 = await localApi.get("/anything/basic", undefined, {
+                cache: {
+                    storage: cache,
+                    key: "x",
+                    shouldCacheResponse: true,
+                    ttl: undefined,
+                },
+            });
+
+            response2.body.ok.must.equal(true);
+            response2.cached.must.equal(true);
+
+            await wait(2000);
+
+            registerMock(() => (req, res) => res.send({ ok2: true }));
+
+            const response3 = await localApi.get("/anything/basic", undefined, {
+                cache: {
+                    storage: cache,
+                    key: "x",
+                    shouldCacheResponse: true,
+                    ttl: undefined,
+                },
+            });
+
+            response3.cached.must.equal(false);
+            response3.body.ok2.must.equal(true);
+        });
+
+        it("supports prefer-request strategy", async () => {
+            registerMock(() => (req, res) => res.send({ ok1: true }));
+            registerMock(() => (req, res) => res.send({ ok2: true }));
+            let called3 = false;
+            registerMock(() => (req, res) => {
+                called3 = true;
+                return res.code(404).send({ err3: true });
+            });
+
+            const cache = new Keyv() as CacheInterface;
+            const cacheOpts = {
+                storage: cache,
+                key: "x",
+                shouldCacheResponse: true,
+                ttl: undefined,
+                loadStrategy: "prefer-request" as const,
+            };
+
+            const response = await localApi.get("/anything/basic", undefined, {
+                cache: cacheOpts,
+            });
+            response.body.ok1.must.equal(true);
+            response.cached.must.be.false();
+
+            const response2 = await localApi.get("/anything/basic", undefined, {
+                cache: cacheOpts,
+            });
+            response2.body.ok2.must.equal(true);
+            response2.cached.must.be.false();
+
+            called3.must.be.false();
+            const response3 = await localApi.get("/anything/basic", undefined, {
+                cache: cacheOpts,
+            });
+            called3.must.be.true(); // it tried
+            response3.body.ok2.must.equal(true);
+            response3.cached.must.be.true(); // but finally used cache
+
+            const response4 = await localApi.get("/anything/basic", undefined, {
+                cache: {
+                    ...cacheOpts,
+                    loadStrategy: "prefer-cache",
+                },
+            });
+            response4.cached.must.equal(true);
+        });
+
+        it("supports cache-only strategy", async () => {
+            registerMock(() => (req, res) => res.send({ ok1: true }));
+
+            const cache = new Keyv() as CacheInterface;
+            const cacheOpts = {
+                storage: cache,
+                key: "x",
+                shouldCacheResponse: true,
+                ttl: undefined,
+                loadStrategy: "cache-only" as const,
+            };
+
+            const request = localApi.get("/anything/basic", undefined, {
+                cache: cacheOpts,
+            });
+
+            request.then(() => {
+                throw new Error("Expected request to fail");
+            }, (e: unknown) => {
+                // TODO cache miss should include request details?
+                e.must.be.instanceof(CacheMissError);
+            });
+
+            await localApi.get("/anything/basic", undefined, {
+                cache: {
+                    ...cacheOpts,
+                    loadStrategy: "prefer-cache",
+                },
+            });
+
+            const response3 = await localApi.get("/anything/basic", undefined, {
+                cache: cacheOpts,
+            });
+
+            response3.body.ok1.must.equal(true);
+            response3.cached.must.be.true();
+        });
+
+        it("supports request-only strategy", async () => {
+            registerMock(() => (req, res) => res.send({ ok1: true }));
+            registerMock(() => (req, res) => res.send({ ok2: true }));
+            registerMock(() => (req, res) => res.code(404).send({ err3: true }));
+
+            let cacheGetCalledTimes = 0;
+
+            const cache = new Keyv() as CacheInterface;
+            const originalGet = cache.get;
+            cache.get = function(...args) {
+                cacheGetCalledTimes++;
+                return originalGet.apply(this, args);
+            };
+
+            const cacheOpts = {
+                storage: cache,
+                key: "x",
+                shouldCacheResponse: true,
+                ttl: undefined,
+                loadStrategy: "request-only" as const,
+            };
+
+            const response = await localApi.get("/anything/basic", undefined, {
+                cache: cacheOpts,
+            });
+            response.body.ok1.must.equal(true);
+            response.cached.must.be.false();
+            cacheGetCalledTimes.must.equal(0);
+
+            const response2 = await localApi.get("/anything/basic", undefined, {
+                cache: cacheOpts,
+            });
+            response2.body.ok2.must.equal(true);
+            response2.cached.must.be.false();
+            cacheGetCalledTimes.must.equal(0);
+
+            const response3 = await localApi.get("/anything/basic", undefined, {
+                cache: cacheOpts,
+                throw: {
+                    onClientErrorResponses: false,
+                },
+            });
+            response3.body.err3.must.equal(true);
+            response3.cached.must.be.false();
+            cacheGetCalledTimes.must.equal(0);
+        });
     });
 
-    // TODO cache strategy & ttl
+    // TODO cache strategy
 
     // TODO: test upper casing method? does it matter? httpbin always upper case it
     // TODO httpbin will cry on lower case patch, but it always returns uppercased method
+
+    // TODO strip hash from relative url
+    // TODO throw if hash given for base url
 });

@@ -48,6 +48,12 @@ const TimeoutError = ApiReachError.extend<AbortErrorDetails>("TimeoutError");
 type TimeoutError = ReturnType<typeof TimeoutError>;
 
 /**
+ * Error thrown when the cache is empty and the request is not allowed to be made
+ */
+const CacheMissError = ApiReachError.extend("CacheMissError");
+type CacheMissError = ReturnType<typeof CacheMissError>;
+
+/**
  * Generic HTTP error, will never be thrown directly
  */
 const HttpError = ApiReachError.extend<BasicErrorDetails>("HttpError");
@@ -77,6 +83,7 @@ type ResponseDataTypeMismatchError = ReturnType<typeof ResponseDataTypeMismatchE
 export type { AbortErrorDetails };
 export {
     ApiReachError, AbortError, TimeoutError, UnknownError,
+    CacheMissError,
     HttpError, HttpClientError, HttpServerError,
     ResponseDataTypeMismatchError,
 };

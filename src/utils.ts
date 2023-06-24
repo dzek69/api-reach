@@ -44,6 +44,15 @@ const matchStatus = (status: number) => {
     throw new Error("Unknown HTTP status");
 };
 
+const stripHash = (str: string) => {
+    const hashIndex = str.indexOf("#");
+    if (hashIndex === -1) {
+        return str;
+    }
+    return str.substring(0, hashIndex);
+};
+
 export {
     matchStatus,
+    stripHash,
 };

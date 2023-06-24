@@ -41,7 +41,7 @@ interface CacheOptions {
      */
     ttl: CacheGetTTL | number | undefined;
     /**
-     * A function that accepts request and response data (status, headers, body etc.) and returns a boolean indicating
+     * A function that accepts response object (which includes request & response data) and returns a boolean indicating
      * whether this response should be cached (if the strategy allows it).
      */
     shouldCacheResponse: CacheShouldCacheResponse | boolean;

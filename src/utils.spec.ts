@@ -1,4 +1,4 @@
-import { matchStatus } from "./utils.js";
+import { matchStatus, stripHash } from "./utils.js";
 import { ResponseStatusGroup } from "./const.js";
 
 describe("utils", () => {
@@ -21,6 +21,20 @@ describe("utils", () => {
             (() => matchStatus(99)).must.throw();
             (() => matchStatus(0)).must.not.throw();
             (() => matchStatus(-1)).must.throw();
+        });
+    });
+
+    describe("stripHash", () => {
+        it("strips hash", async () => {
+            stripHash("foo#bar").must.equal("foo");
+        });
+
+        it("strips after first hash if multiple given", async () => {
+            stripHash("foo#bar#baz").must.equal("foo");
+        });
+
+        it("does nothing if no hash", async () => {
+            stripHash("foo").must.equal("foo");
         });
     });
 });
