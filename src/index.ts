@@ -8,28 +8,38 @@ import type FetchType from "node-fetch";
 import type {
     AbortablePromise,
     ApiClientConfig,
-    ApiEndpoints, CachedData, CacheOptions,
+    ApiEndpoints,
+    CachedData,
+    CacheOptions,
     FinalOptions,
     GenericBody,
-    GenericHeaders, GenericParams, GenericQuery,
+    GenericHeaders,
+    GenericParams,
+    GenericQuery,
     Options,
-    RequestData, RequestOptions,
+    RequestData,
+    RequestOptions,
 } from "./types";
 import type { AbortErrorDetails } from "./errors";
 import type { ApiResponse } from "./response/response.js";
 
-import { ClientErrorResponse, ServerErrorResponse, createResponse } from "./response/response.js";
+import { ClientErrorResponse, createResponse, ServerErrorResponse } from "./response/response.js";
 import { contentTypeMap, ExpectedResponseBodyType, RequestBodyType } from "./const.js";
 import {
-    AbortError, TimeoutError, UnknownError, ResponseDataTypeMismatchError, HttpClientError, HttpServerError,
+    AbortError,
+    HttpClientError,
     HttpError,
+    HttpServerError,
+    ResponseDataTypeMismatchError,
+    TimeoutError,
+    UnknownError,
 } from "./errors.js";
 import { ApiRequest } from "./request/request.js";
 
 const defaultOptions: Pick<
 Required<Options<ExpectedResponseBodyType, any>>,
 "requestType" | "responseType" | "timeout" | "retry" | "throw"
-> = {
+> & { cache: Partial<Options<ExpectedResponseBodyType, any>["cache"]> } = {
     responseType: ExpectedResponseBodyType.json,
     requestType: RequestBodyType.json,
     timeout: 30000,
@@ -37,6 +47,10 @@ Required<Options<ExpectedResponseBodyType, any>>,
     throw: {
         onServerErrorResponses: true,
         onClientErrorResponses: true,
+    },
+    cache: {
+        loadStrategy: "prefer-cache",
+        saveStrategy: "save",
     },
 };
 
@@ -58,14 +72,14 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
     private _getResponseType<
         RT extends ExpectedResponseBodyType,
         Op extends Options<RT, any>,
-    >(options: Op): ExpectedResponseBodyType {
+    >(options: Pick<Op, "responseType">): ExpectedResponseBodyType {
         return options.responseType ?? this._options.responseType ?? ExpectedResponseBodyType.json;
     }
 
     /**
      * Returns final request data type
      */
-    private _getRequestType(options: Options<any, any>): RequestBodyType {
+    private _getRequestType(options: Pick<Options<any, any>, "requestType">): RequestBodyType {
         return options.requestType ?? this._options.requestType ?? RequestBodyType.json;
     }
 
@@ -74,7 +88,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
      * @param options
      * @private
      */
-    private _getContentType(options: Options<any, any>) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    private _getContentType(options: Pick<Options<any, any>, "responseType">) { // eslint-disable-line @typescript-eslint/no-explicit-any,max-len
         const type = this._getResponseType(options);
         return contentTypeMap[type];
     }
@@ -87,10 +101,10 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
      */
     private _buildRequestBody<
         B extends GenericBody,
-    >(options: Options<any, any>, body?: B) {
+    >(options: Pick<Options<any, any>, "requestType">, body?: B) {
         const requestType = this._getRequestType(options);
 
-        if (requestType === "plain" && typeof body !== "string") {
+        if (requestType === RequestBodyType.plain && typeof body !== "string") {
             throw new Error("Body must be a string when request type is set to plain text");
         }
 
@@ -109,7 +123,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
         return null;
     }
 
-    // eslint-disable-next-line max-lines-per-function,max-statements
+    // eslint-disable-next-line max-lines-per-function
     private _buildFetchOptions<
         RT extends ExpectedResponseBodyType,
         H extends GenericHeaders,
@@ -134,16 +148,13 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
 
         const retry = options.retry ?? this._options.retry ?? defaultOptions.retry;
 
-        let cache: Partial<CacheOptions> | undefined = { ...this._options.cache, ...options.cache };
-        if (!cache.storage) {
-            cache = undefined;
-        }
+        const cache = this._buildCacheOptions(options);
 
         const opts: FinalOptions<ExpectedResponseBodyType, NonNullable<GenericHeaders>> = {
             // @TODO filter only known options?
-            ...defaultOptions,
-            ...this._options,
-            ...options,
+            ...omit(defaultOptions, ["cache"]),
+            ...omit(this._options, ["cache"]),
+            ...omit(options, ["cache"]),
             retry: { // @TODO handle retry options
                 shouldRetry: ({ tryNo }) => {
                     if (typeof retry === "number") {
@@ -164,7 +175,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
                     return retry.interval({ tryNo });
                 },
             },
-            ...(cache ? { cache: cache as CacheOptions } : undefined),
+            ...(cache ? { cache } : undefined),
             fetchOptions: {
                 ...this._options.fetchOptions,
                 ...options.fetchOptions,
@@ -184,6 +195,30 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
 
         return opts;
     }
+
+    private readonly _buildCacheOptions = <
+        RT extends ExpectedResponseBodyType,
+        H extends GenericHeaders,
+    >(options: RequestOptions<RT, H>): CacheOptions | null => {
+        const storage = this._options.cache?.storage ?? options.cache?.storage;
+        if (!storage) {
+            return null;
+        }
+        const cache: Partial<CacheOptions> = {
+            ...defaultOptions.cache,
+            ...this._options.cache,
+            ...options.cache,
+        };
+
+        if (
+            !cache.storage || !cache.loadStrategy || !cache.saveStrategy
+            || !cache.key || !("ttl" in cache) || !cache.shouldCacheResponse
+        ) {
+            return null;
+        }
+
+        return cache as CacheOptions;
+    };
 
     /**
      * Either correctly parses url or returns null, no throwing
@@ -546,13 +581,14 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
         Q extends RL[Uppercase<Mthd>][U]["query"],
         H extends RL[Uppercase<Mthd>][U]["headers"],
         RB extends RL[Uppercase<Mthd>][U]["response"],
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         AReq extends ApiRequest<Mthd, U, P, B, BT, Q, H, RT>,
         RT extends ExpectedResponseBodyType = T,
     >(request: AReq, response: {
         bodyText: string;
         status: number;
         statusText: string;
-        headers: H;
+        headers: GenericHeaders;
     }, cached = false): Promise<RT extends ExpectedResponseBodyType.json
             ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>
             : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>> {

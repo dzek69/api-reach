@@ -4,6 +4,7 @@ import must from "must";
 import Keyv from "keyv";
 
 import type { CacheInterface } from "./types/cache";
+import type { RequestOptions } from "./types";
 
 import { AbortError, HttpClientError, HttpError, HttpServerError, TimeoutError } from "./errors";
 
@@ -427,7 +428,7 @@ describe("api-reach", () => {
                     page: 1,
                 },
                 headers: {
-                    Custom: "header",
+                    custom: "header",
                 },
             });
             response.body.args.must.be.an.object();
@@ -456,7 +457,7 @@ describe("api-reach", () => {
                     page: 1,
                 },
                 headers: {
-                    Custom: "header",
+                    custom: "header",
                 },
                 body: {
                     title: "hello",
@@ -475,6 +476,28 @@ describe("api-reach", () => {
 
             response.body.url.must.equal("/anything/advanced?page=1");
         });
+
+        it("should merge query params", async () => {
+            registerMock(() => (req, res) => res.send({
+                method: req.method,
+                url: req.url,
+                headers: req.headers,
+                args: req.query,
+                data: req.body,
+            }));
+
+            const response = await localApi.get("/anything/advanced?x=1&y=2", {
+                query: {
+                    z: 3,
+                    x: 4,
+                },
+            });
+
+            response.body.args.must.be.an.object();
+            response.body.args.must.eql({ x: ["1", "4"], y: "2", z: "3" });
+        });
+
+        // @TODO params :id test
 
         // TODO// @TODO test possibility to send body with get anyway + maybe do a configurable throw against that
     });
@@ -575,6 +598,7 @@ describe("api-reach", () => {
                     storage: cache,
                     key: "x",
                     shouldCacheResponse: true,
+                    ttl: undefined,
                 },
             });
 
@@ -586,6 +610,7 @@ describe("api-reach", () => {
                     storage: cache,
                     key: "x",
                     shouldCacheResponse: true,
+                    ttl: undefined,
                 },
             });
 
@@ -602,6 +627,7 @@ describe("api-reach", () => {
                     storage: cache,
                     key: "x",
                     shouldCacheResponse: true,
+                    ttl: undefined,
                 },
             }).then(() => {
                 throw new Error("Expected error to be thrown");
@@ -612,6 +638,7 @@ describe("api-reach", () => {
                     storage: cache,
                     key: "x",
                     shouldCacheResponse: true,
+                    ttl: undefined,
                 },
             });
 
@@ -634,6 +661,7 @@ describe("api-reach", () => {
                     storage: cache,
                     key: "x",
                     shouldCacheResponse: true,
+                    ttl: undefined,
                 },
                 throw: {
                     onClientErrorResponses: false,
@@ -645,6 +673,7 @@ describe("api-reach", () => {
                     storage: cache,
                     key: "x",
                     shouldCacheResponse: true,
+                    ttl: undefined,
                 },
                 throw: {
                     onClientErrorResponses: true,
@@ -686,6 +715,7 @@ describe("api-reach", () => {
                         storage: cache,
                         key: (req) => req.url,
                         shouldCacheResponse: true,
+                        ttl: undefined,
                     },
                 });
 
@@ -716,6 +746,7 @@ describe("api-reach", () => {
                         storage: cache,
                         key: keyFn,
                         shouldCacheResponse: true,
+                        ttl: undefined,
                     },
                 });
 
@@ -752,6 +783,62 @@ describe("api-reach", () => {
                         },
                     },
                 ]);
+            });
+        });
+
+        describe("with dynamic shouldCacheResponse", () => {
+            it("caches only requests that are allowed to cache", async () => {
+                registerMock(() => (req, res) => res.send({ first: true }));
+                registerMock(() => (req, res) => res.send({ second: true }));
+                const cache = new Keyv() as CacheInterface;
+
+                const options: RequestOptions<any, any> = {
+                    cache: {
+                        storage: cache,
+                        key: "x",
+                        shouldCacheResponse: (response) => {
+                            const body = response.body;
+                            if (typeof body !== "string" && body.second) {
+                                return true;
+                            }
+                            return false;
+                        },
+                        ttl: undefined,
+                    },
+                };
+
+                const r1 = await localApi.get("/anything/basic", undefined, options);
+                const r2 = await localApi.get("/anything/basic", undefined, options);
+                const r3 = await localApi.get("/anything/basic", undefined, options);
+
+                r1.body.must.eql({ first: true });
+                r1.cached.must.equal(false);
+                r2.body.must.eql({ second: true });
+                r2.cached.must.equal(false);
+                r3.body.must.eql({ second: true });
+                r3.cached.must.equal(true);
+            });
+
+            it("calls shouldCacheResponse with response", async () => {
+                registerMock(() => (req, res) => res.send({ first: true }));
+
+                const shouldFn = jest.fn().mockImplementation(() => true);
+
+                const cache = new Keyv() as CacheInterface;
+                const options: RequestOptions<any, any> = {
+                    cache: {
+                        storage: cache,
+                        key: "x",
+                        shouldCacheResponse: shouldFn,
+                        ttl: undefined,
+                    },
+                };
+
+                const response = await localApi.get("/anything/basic", undefined, options);
+
+                must(shouldFn.mock.calls).have.length(1);
+                must(shouldFn.mock.calls[0]).have.length(1);
+                must(shouldFn.mock.calls[0][0]).eql(response);
             });
         });
     });

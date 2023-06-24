@@ -39,15 +39,17 @@ type CacheShouldCacheResponse = <
     P extends GenericParams, B extends GenericBody,
     BT extends RequestBodyType | undefined, Q extends GenericQuery,
     H extends GenericHeaders,
-    RB extends GenericJSONResponse | string, RT extends ExpectedResponseBodyType,
+    RB extends (GenericJSONResponse | string), RT extends ExpectedResponseBodyType,
 >(response: ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>) => boolean;
 
-type CacheStrategy = "load-only" | "save-only" | "load-and-save" | "no-cache"; // @TODO | "revalidate";
+type CacheLoadStrategy = "prefer-cache" | "prefer-request" | "cache-only" | "request-only";
+type CacheSaveStrategy = "save" | "no-save";
 
 export type {
     CacheInterface,
     CacheGetKey,
     CacheGetTTL,
     CacheShouldCacheResponse,
-    CacheStrategy,
+    CacheLoadStrategy,
+    CacheSaveStrategy,
 };

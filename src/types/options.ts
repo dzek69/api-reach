@@ -1,7 +1,9 @@
 import type { RequestRedirect as NodeFetchRequestRedirect } from "node-fetch";
 import type { ExpectedResponseBodyType, RequestBodyType } from "../const";
 import type { GenericHeaders } from "./common";
-import type { CacheGetKey, CacheGetTTL, CacheInterface, CacheShouldCacheResponse, CacheStrategy } from "./cache";
+import type {
+    CacheGetKey, CacheGetTTL, CacheInterface, CacheShouldCacheResponse, CacheSaveStrategy, CacheLoadStrategy,
+} from "./cache";
 
 interface RetryInfo {
     tryNo: number;
@@ -26,14 +28,22 @@ interface TimeoutOptions {
 
 interface CacheOptions {
     storage: CacheInterface;
-    strategy: CacheStrategy;
+    loadStrategy: CacheLoadStrategy;
+    saveStrategy: CacheSaveStrategy;
     /**
-     * A function that gets request data (method, url, query params etc.) and returns a key for the cache.
-     * If key is given and exists the value will be read from the cache and returned.
+     * A function that accepts request data (method, url, query params etc.) and returns a key for the cache.
+     * If a key is returned it might be used for reading from and saving to the cache (depending on the strategy).
      * If it returns `undefined`, the request will not be loaded from cache nor stored in the cache.
      */
     key: CacheGetKey | string;
-    ttl: CacheGetTTL | number;
+    /**
+     * A function that accepts request data (method, url, query params etc.) and returns a TTL for the cache.
+     */
+    ttl: CacheGetTTL | number | undefined;
+    /**
+     * A function that accepts request and response data (status, headers, body etc.) and returns a boolean indicating
+     * whether this response should be cached (if the strategy allows it).
+     */
     shouldCacheResponse: CacheShouldCacheResponse | boolean;
 }
 
@@ -46,7 +56,7 @@ interface Options<RT extends ExpectedResponseBodyType, H extends GenericHeaders>
     requestType?: RequestBodyType;
     retry?: RetryOptions;
     timeout?: number | TimeoutOptions;
-    cache?: CacheOptions;
+    cache?: CacheOptions | undefined;
     throw?: {
         onClientErrorResponses?: boolean;
         onServerErrorResponses?: boolean;
