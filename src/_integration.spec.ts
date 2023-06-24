@@ -1036,9 +1036,74 @@ describe("api-reach", () => {
             response3.cached.must.be.false();
             cacheGetCalledTimes.must.equal(0);
         });
-    });
 
-    // TODO cache strategy
+        it("supports no-save strategy", async () => {
+            registerMock(() => (req, res) => res.send({ ok1: true }));
+            registerMock(() => (req, res) => res.send({ ok2: true }));
+            registerMock(() => (req, res) => res.send({ ok3: true }));
+
+            let cacheSetCalledTimes = 0;
+
+            const cache = new Keyv() as CacheInterface;
+            const originalSet = cache.set;
+            cache.set = function(...args) {
+                cacheSetCalledTimes++;
+                return originalSet.apply(this, args);
+            };
+
+            const cacheOpts = {
+                storage: cache,
+                key: "x",
+                shouldCacheResponse: true,
+                ttl: undefined,
+                loadStrategy: "request-only" as const,
+                saveStrategy: "no-save" as const,
+            };
+
+            const response = await localApi.get("/anything/basic", undefined, {
+                cache: cacheOpts,
+            });
+            response.body.ok1.must.equal(true);
+            response.cached.must.be.false();
+            cacheSetCalledTimes.must.equal(0);
+
+            const response2 = await localApi.get("/anything/basic", undefined, {
+                cache: {
+                    ...cacheOpts,
+                    loadStrategy: "prefer-cache",
+                },
+            });
+
+            response2.body.ok2.must.equal(true);
+            response2.cached.must.be.false();
+            cacheSetCalledTimes.must.equal(0);
+
+            const response3 = await localApi.get("/anything/basic", undefined, {
+                cache: {
+                    ...cacheOpts,
+                    loadStrategy: "prefer-request",
+                },
+            });
+
+            response3.body.ok3.must.equal(true);
+            response3.cached.must.be.false();
+            cacheSetCalledTimes.must.equal(0);
+
+            const request4 = localApi.get("/anything/basic", undefined, {
+                cache: {
+                    ...cacheOpts,
+                    loadStrategy: "prefer-cache",
+                },
+            });
+
+            request4.then(() => {
+                throw new Error("Expected request to fail");
+            }, (e: unknown) => {
+                e.must.be.instanceof(CacheMissError);
+                cacheSetCalledTimes.must.equal(0);
+            });
+        });
+    });
 
     // TODO: test upper casing method? does it matter? httpbin always upper case it
     // TODO httpbin will cry on lower case patch, but it always returns uppercased method

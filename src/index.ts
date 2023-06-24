@@ -509,7 +509,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
                 if (cacheKey && !resp.cached) {
                     const cacheOpt = finalOptions.cache!;
                     const shouldCache = cacheOpt.shouldCacheResponse;
-                    if (shouldCache) {
+                    if (cacheOpt.saveStrategy === "save" && shouldCache) {
                         const ttl = typeof cacheOpt.ttl === "function" ? cacheOpt.ttl(resp) : cacheOpt.ttl;
                         const sc = typeof shouldCache === "function" ? shouldCache(resp) : shouldCache;
                         if (sc) {
@@ -526,7 +526,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
                     const cacheOpt = finalOptions.cache!;
                     const shouldCache = cacheOpt.shouldCacheResponse;
                     const resp = e.details?.response;
-                    if (shouldCache && resp) {
+                    if (cacheOpt.saveStrategy === "save" && shouldCache && resp) {
                         const sc = typeof shouldCache === "function" ? shouldCache(resp) : shouldCache;
                         if (sc) {
                             await cacheOpt.storage.set(cacheKey, JSON.stringify({
