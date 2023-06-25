@@ -5,6 +5,7 @@ import { createError } from "@ezez/errors";
 import type { GenericBody, GenericHeaders, GenericJSONResponse, GenericParams, GenericQuery } from "./types";
 import type { ExpectedResponseBodyType, RequestBodyType } from "./const";
 import type { ApiResponse } from "./response/response";
+import type { ApiRequest } from "./request/request";
 
 type BasicErrorDetails<
     Mthd extends string = string, U extends string = string,
@@ -18,9 +19,17 @@ type BasicErrorDetails<
     response: ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>;
 };
 
-type AbortErrorDetails = {
+type AbortErrorDetails<
+    Mthd extends string = string, U extends string = string,
+    P extends GenericParams = GenericParams, B extends GenericBody = GenericBody,
+    BT extends RequestBodyType | undefined = RequestBodyType | undefined,
+    Q extends GenericQuery = GenericQuery,
+    H extends GenericHeaders = GenericHeaders,
+    RT extends ExpectedResponseBodyType = ExpectedResponseBodyType,
+> = {
     tries: number;
     while: "waiting" | "connection";
+    request: ApiRequest<Mthd, U, P, B, BT, Q, H, RT>;
 };
 
 /**

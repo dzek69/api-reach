@@ -1108,6 +1108,9 @@ describe("api-reach", () => {
     // TODO: test upper casing method? does it matter? httpbin always upper case it
     // TODO httpbin will cry on lower case patch, but it always returns uppercased method
 
+    // TODO test for mixing relative and absolute urls
+    // TODO custom dependencies
+
     // TODO strip hash from relative url
     // TODO throw if hash given for base url
 });

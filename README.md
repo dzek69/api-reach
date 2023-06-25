@@ -26,6 +26,8 @@ TypeScript support is limited.
 - requests deduplication
 - do not pass unknown options to `fetch`
 - handle unknown options (incorrect type)
+- option to not wait for cache to save before resolving
+- expose cache errors via options callback
 
 ## License
 

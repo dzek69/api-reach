@@ -4,7 +4,6 @@ import qs from "qs";
 import { Timeout } from "oop-timers";
 import { noop, omit, pick, replace, wait } from "@ezez/utils";
 
-import type FetchType from "node-fetch";
 import type {
     AbortablePromise,
     ApiClientConfig,
@@ -34,6 +33,7 @@ import {
     TimeoutError,
     UnknownError,
     CacheMissError,
+    ApiReachError,
 } from "./errors.js";
 import { ApiRequest } from "./request/request.js";
 
@@ -55,15 +55,24 @@ Required<Options<ExpectedResponseBodyType, any>>,
     },
 };
 
+interface Dependencies {
+    fetch: typeof fetch;
+    URL: typeof URL;
+    qsStringify: (data: unknown) => string;
+}
+
 class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
     private readonly _options: Options<T, GenericHeaders>;
 
-    private readonly _dependencies: { fetch: typeof FetchType };
+    private readonly _dependencies: Dependencies;
 
-    public constructor(options?: Options<T, GenericHeaders>) {
+    public constructor(options?: Options<T, GenericHeaders>, dependencies?: Partial<Dependencies>) {
         this._options = options ?? {};
         this._dependencies = {
             fetch: fetch,
+            URL: URL,
+            qsStringify: qs.stringify,
+            ...dependencies,
         };
     }
 
@@ -110,15 +119,14 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
         }
 
         if (typeof body === "string") {
-            // @TODO maybe crash if manually stringified? we have no control over the actual format anymore
             return body;
         }
 
         if (requestType === RequestBodyType.json) {
-            return JSON.stringify(body); // @TODO plugin for custom serialization?
+            return JSON.stringify(body);
         }
         if (requestType === RequestBodyType.urlencoded) {
-            return qs.stringify(body);
+            return this._dependencies.qsStringify(body);
         }
 
         return null;
@@ -156,7 +164,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
             ...omit(defaultOptions, ["cache"]),
             ...omit(this._options, ["cache"]),
             ...omit(options, ["cache"]),
-            retry: { // @TODO handle retry options
+            retry: {
                 shouldRetry: ({ tryNo }) => {
                     if (typeof retry === "number") {
                         return tryNo <= retry + 1;
@@ -230,8 +238,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
         }
 
         try {
-            // @TODO replace URL with deps
-            return new URL(url);
+            return new this._dependencies.URL(url);
         }
         catch {}
 
@@ -243,18 +250,30 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
      */
     private _buildUrlBase(url: string, base?: string) {
         const parsedBase = this._safeUrlParse(base);
+        const parsedUrl = this._safeUrlParse(url);
+
         if (!parsedBase?.host) {
-            // if no base is given - just use the url
-            // @TODO check for full url here? throw custom, meaningful error
-            // local urls crashes on node
-            // but it works in browsers
+            if (typeof window === "object") {
+                // No base url in browser - just use the url, either relative or absolute
+                return url;
+            }
+
+            if (!parsedUrl?.host) {
+                // No full URL can be constructed on server side
+                throw new ApiReachError(
+                    `No base url given and url ${url} is not absolute. This is valid in browsers but `
+                    + `invalid on server.`,
+                );
+            }
+
+            // url is absolute
             return url;
         }
 
-        // base is defined at this point
-        const parsedUrl = this._safeUrlParse(url);
         if (parsedUrl) { // base is valid full url and given url is also full url
-            throw new Error("Cannot use absolute url with base url."); // @todo throw custom type?
+            throw new ApiReachError(
+                `Cannot use absolute url ${url} with base url ${base!}. `,
+            );
         }
 
         return urlJoin(base!, url);
@@ -273,8 +292,6 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
         }
         const hasQuery = fullUrl.includes("?");
         const appendChar = hasQuery ? "&" : "?";
-        // @todo extract existing query params from string and include for stringify ?
-        // @todo add support for string query params
 
         if (hasQuery) {
             console.warn(
@@ -283,7 +300,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
             );
         }
 
-        return fullUrl + appendChar + qs.stringify(query); // @TODO use stringify from deps
+        return fullUrl + appendChar + this._dependencies.qsStringify(query);
     }
 
     public get<
@@ -453,14 +470,15 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
                             const errorDetails: AbortErrorDetails = {
                                 while: "waiting",
                                 tries: tryNo - 1,
+                                request: request,
                             };
 
                             const becauseOfTimeout = timedoutLocal || timedoutGlobal;
 
                             lastError = becauseOfTimeout
                                 // @TODO messages
-                                ? new TimeoutError("Connection timed TODO", errorDetails)
-                                : new AbortError("Req abort", errorDetails);
+                                ? new TimeoutError(`Request to ${request.fullUrl} timed out`, errorDetails)
+                                : new AbortError(`Request to ${request.fullUrl} aborted`, errorDetails);
                         }
                         singleTimeout.start();
 
@@ -473,14 +491,15 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
                             const errorDetails: AbortErrorDetails = {
                                 while: "connection",
                                 tries: tryNo,
+                                request: request,
                             };
 
+                            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                             const becauseOfTimeout = timedoutLocal || timedoutGlobal;
 
                             lastError = becauseOfTimeout
-                                // @TODO messages
-                                ? new TimeoutError("Connection timed TODO", errorDetails)
-                                : new AbortError("Req abort", errorDetails);
+                                ? new TimeoutError(`Request to ${request.fullUrl} timed out`, errorDetails)
+                                : new AbortError(`Request to ${request.fullUrl} aborted`, errorDetails);
 
                             if (timedoutGlobal) {
                                 // prevent more retries
@@ -500,12 +519,12 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
                     if (cachedResponse) {
                         return cachedResponse;
                     }
-                    throw lastError ? lastError : new Error("No error??"); // @TODO what to do? is this possible?
                 }
 
-                throw lastError ? lastError : new Error("No error??"); // @TODO what to do? is this possible?
+                throw lastError ?? new UnknownError(
+                    "Internal api-reach error, this should never happen, please report it",
+                );
             })().then(async (resp) => {
-                // @TODO add option to wait for cache before resolving
                 if (cacheKey && !resp.cached) {
                     const cacheOpt = finalOptions.cache!;
                     const shouldCache = cacheOpt.shouldCacheResponse;
@@ -584,6 +603,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
         Q extends RL[Uppercase<Mthd>][U]["query"],
         H extends RL[Uppercase<Mthd>][U]["headers"],
         RB extends RL[Uppercase<Mthd>][U]["response"],
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         AReq extends ApiRequest<Mthd, U, P, B, BT, Q, H, RT>,
         RT extends ExpectedResponseBodyType = T,
     >(request: AReq, signal: AbortSignal): Promise<RT extends ExpectedResponseBodyType.json
