@@ -1,0 +1,27 @@
+{
+    "extends": [
+        "./tsconfig.json"
+    ],
+    "compilerOptions": {
+        "exactOptionalPropertyTypes": true,
+        "importHelpers": true,
+        "module": "es2015",
+        "moduleDetection": "auto",
+        "moduleSuffixes": [
+            ""
+        ],
+        "noEmit": true,
+        "noImplicitOverride": true,
+        "noImplicitReturns": true,
+        "noUncheckedIndexedAccess": true,
+        "outDir": "./esm-lint",
+        "preserveValueImports": false,
+        "target": "es2019",
+        "useUnknownInCatchVariables": true
+    },
+    "include": [
+        "*",
+        "**/*"
+    ],
+    "exclude": []
+}

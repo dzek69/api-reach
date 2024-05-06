@@ -1,0 +1,29 @@
+{
+    "extends": [
+        "./tsconfig.json"
+    ],
+    "compilerOptions": {
+        "exactOptionalPropertyTypes": true,
+        "importHelpers": false,
+        "module": "commonjs",
+        "moduleDetection": "auto",
+        "moduleSuffixes": [
+            ""
+        ],
+        "noEmit": false,
+        "noImplicitOverride": true,
+        "noImplicitReturns": true,
+        "noUncheckedIndexedAccess": true,
+        "outDir": "./dist",
+        "preserveValueImports": false,
+        "target": "es2017",
+        "useUnknownInCatchVariables": true
+    },
+    "include": [
+        "src/"
+    ],
+    "exclude": [
+        "src/**/*.spec.ts",
+        "src/__test/**"
+    ]
+}
