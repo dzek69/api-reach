@@ -2,7 +2,6 @@
 /build-scripts/
 /test/
 
-/babel.config.cjs
 /jest.config.cjs
 /yarn.lock
 /*.tgz
@@ -14,3 +13,5 @@
 /.eslintrc.json
 
 *.itest.*
+
+/pagesconfig.json

@@ -1,96 +1,148 @@
-import type { Response as NodeFetchResponse, Headers as NodeFetchHeaders } from "node-fetch";
+import type { ApiRequest } from "../request/request";
+import type { GenericBody, GenericHeaders, GenericJSONResponse, GenericParams, GenericQuery } from "../types";
+import type { ExpectedResponseBodyType, RequestBodyType } from "../const";
 
 import { ResponseStatusGroup } from "../const.js";
-import { matchStatus } from "./matchStatus.js";
-import decodeData from "./decodeData.js";
+import { matchStatus } from "../utils.js";
 
-import type { RequestType } from "../const.js";
-import type { ApiRequest } from "../request/request.js";
-import type { FetchLikeData, ResponseData } from "../types.js";
+interface ApiResponseData<
+    Mthd extends string, U extends string,
+    P extends GenericParams, B extends GenericBody,
+    BT extends RequestBodyType | undefined, Q extends GenericQuery,
+    H extends GenericHeaders, RB extends GenericJSONResponse | string | ReadableStream<Uint8Array> | undefined,
+    RT extends ExpectedResponseBodyType,
+> {
+    status: number;
+    statusText: string;
+    headers: GenericHeaders;
+    request: ApiRequest<Mthd, U, P, B, BT, Q, H, RT>;
+    body: RB;
+}
 
-/**
- * @class ApiResponse
- * @property {number} status - response status
- * @property {string} statusText - response status text
- * @property {Object} headers - response headers
- * @property {Request} request - request that was send
- * @property {Object|string} body - response body
- * @property {string} type - response type
- * @property {Object|string} [rawBody] - response body as string, when it couldn't be decoded from expected JSON
- */
-class ApiResponse {
+class ApiResponse<
+    Mthd extends string, U extends string,
+    P extends GenericParams, B extends GenericBody,
+    BT extends RequestBodyType | undefined, Q extends GenericQuery,
+    H extends GenericHeaders, RB extends GenericJSONResponse | string | ReadableStream<Uint8Array> | undefined,
+    RT extends ExpectedResponseBodyType,
+> {
+    /**
+     * HTTP status code
+     */
     public readonly status: number;
 
+    /**
+     * HTTP status text
+     */
     public readonly statusText: string;
 
-    public readonly headers: NodeFetchHeaders;
+    /**
+     * Returned headers
+     */
+    public readonly headers: GenericHeaders;
 
-    public readonly request: ApiRequest;
+    /**
+     * Request that was sent
+     */
+    public readonly request: ApiRequest<Mthd, U, P, B, BT, Q, H, RT>;
 
-    public readonly body: ResponseData<unknown>["body"];
+    /**
+     * Body received
+     *
+     * It will be a forced string if request return type mismatch happened!
+     */
+    public readonly body: RB;
 
-    public readonly rawBody?: string;
+    public readonly cached: boolean = false;
 
-    public readonly type: RequestType;
+    // @TODO type?
 
-    public constructor(result: FetchLikeData, data: ResponseData<unknown>, request: ApiRequest) {
-        this.status = result.status;
-        this.statusText = result.statusText;
-        this.headers = result.headers;
-        this.request = request;
-
+    public constructor(data: ApiResponseData<Mthd, U, P, B, BT, Q, H, RB, RT>, cached: boolean = false) {
+        this.status = data.status;
+        this.statusText = data.statusText;
+        this.headers = data.headers;
+        this.request = data.request;
         this.body = data.body;
-        if ("rawBody" in data) {
-            this.rawBody = data.rawBody;
-        }
-        this.type = data.type;
+        this.cached = cached;
     }
 }
 
-class AbortedResponse extends ApiResponse {}
-class InformationalResponse extends ApiResponse {}
-class SuccessResponse extends ApiResponse {}
-class RedirectResponse extends ApiResponse {}
-class ClientErrorResponse extends ApiResponse {}
-class ServerErrorResponse extends ApiResponse {}
+class AbortedResponse<
+    Mthd extends string, U extends string,
+    P extends GenericParams, B extends GenericBody,
+    BT extends RequestBodyType | undefined, Q extends GenericQuery,
+    H extends GenericHeaders, RB extends GenericJSONResponse | string | ReadableStream<Uint8Array> | undefined,
+    RT extends ExpectedResponseBodyType,
+> extends ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT> {}
 
-const createResponseWithData = <Format>(
-    result: FetchLikeData, type: RequestType, request: ApiRequest, data: ResponseData<Format>,
-) => {
-    const statusType = matchStatus(result.status);
+class InformationalResponse<
+    Mthd extends string, U extends string,
+    P extends GenericParams, B extends GenericBody,
+    BT extends RequestBodyType | undefined, Q extends GenericQuery,
+    H extends GenericHeaders, RB extends GenericJSONResponse | string | ReadableStream<Uint8Array> | undefined,
+    RT extends ExpectedResponseBodyType,
+> extends ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT> {}
 
-    if (statusType === ResponseStatusGroup.Aborted) {
-        return new AbortedResponse(result, data, request);
+class SuccessResponse<
+    Mthd extends string, U extends string,
+    P extends GenericParams, B extends GenericBody,
+    BT extends RequestBodyType | undefined, Q extends GenericQuery,
+    H extends GenericHeaders, RB extends GenericJSONResponse | string | ReadableStream<Uint8Array> | undefined,
+    RT extends ExpectedResponseBodyType,
+> extends ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT> {}
+
+class RedirectResponse<
+    Mthd extends string, U extends string,
+    P extends GenericParams, B extends GenericBody,
+    BT extends RequestBodyType | undefined, Q extends GenericQuery,
+    H extends GenericHeaders, RB extends GenericJSONResponse | string | ReadableStream<Uint8Array> | undefined,
+    RT extends ExpectedResponseBodyType,
+> extends ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT> {}
+
+class ClientErrorResponse<
+    Mthd extends string, U extends string,
+    P extends GenericParams, B extends GenericBody,
+    BT extends RequestBodyType | undefined, Q extends GenericQuery,
+    H extends GenericHeaders, RB extends GenericJSONResponse | string | ReadableStream<Uint8Array> | undefined,
+    RT extends ExpectedResponseBodyType,
+> extends ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT> {}
+
+class ServerErrorResponse<
+    Mthd extends string, U extends string,
+    P extends GenericParams, B extends GenericBody,
+    BT extends RequestBodyType | undefined, Q extends GenericQuery,
+    H extends GenericHeaders, RB extends GenericJSONResponse | string | ReadableStream<Uint8Array> | undefined,
+    RT extends ExpectedResponseBodyType,
+> extends ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT> {}
+
+const createResponse = <
+    Mthd extends string, U extends string,
+    P extends GenericParams, B extends GenericBody,
+    BT extends RequestBodyType | undefined, Q extends GenericQuery,
+    H extends GenericHeaders, RB extends GenericJSONResponse | string | ReadableStream<Uint8Array> | undefined,
+    RT extends ExpectedResponseBodyType,
+>(data: ApiResponseData<Mthd, U, P, B, BT, Q, H, RB, RT>, cached = false) => {
+    const responseType = matchStatus(data.status);
+    if (responseType === ResponseStatusGroup.Informational) {
+        return new InformationalResponse(data, cached);
     }
-    if (statusType === ResponseStatusGroup.Informational) {
-        return new InformationalResponse(result, data, request);
+    if (responseType === ResponseStatusGroup.Success) {
+        return new SuccessResponse(data, cached);
     }
-    if (statusType === ResponseStatusGroup.Success) {
-        return new SuccessResponse(result, data, request);
+    if (responseType === ResponseStatusGroup.Redirect) {
+        return new RedirectResponse(data, cached);
     }
-    if (statusType === ResponseStatusGroup.Redirect) {
-        return new RedirectResponse(result, data, request);
+    if (responseType === ResponseStatusGroup.ClientError) {
+        return new ClientErrorResponse(data, cached);
     }
-    if (statusType === ResponseStatusGroup.ClientError) {
-        return new ClientErrorResponse(result, data, request);
+    if (responseType === ResponseStatusGroup.ServerError) {
+        return new ServerErrorResponse(data, cached);
     }
-    return new ServerErrorResponse(result, data, request);
+
+    return new AbortedResponse(data, cached);
 };
-
-const createResponse = async <Format>(result: NodeFetchResponse, type: RequestType, request: ApiRequest) => {
-    const data = await decodeData<Format>(result, type);
-    return createResponseWithData<Format>(result, type, request, data);
-};
-
-type Await<T> = T extends Promise<infer U> ? U : T;
-
-type PossibleResponses = Await<ReturnType<typeof createResponse>>;
-type PossibleNonErrorResponses = InformationalResponse | SuccessResponse | RedirectResponse;
-type PossibleErrorResponses = AbortedResponse | ClientErrorResponse | ServerErrorResponse;
 
 export {
-    createResponse,
-    createResponseWithData,
     ApiResponse,
     AbortedResponse,
     InformationalResponse,
@@ -98,10 +150,6 @@ export {
     RedirectResponse,
     ClientErrorResponse,
     ServerErrorResponse,
-};
 
-export type {
-    PossibleResponses,
-    PossibleNonErrorResponses,
-    PossibleErrorResponses,
+    createResponse,
 };

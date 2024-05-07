@@ -1,103 +1,62 @@
-import stream from "stream";
+/* eslint-disable @typescript-eslint/no-magic-numbers */
 
-import { DownloadError } from "./errors.js";
-import type { ApiClient } from "./api-client.js";
-import { RequestType } from "./const.js";
-import type { Data, Options, ResponseDataStream, URLArgument } from "./types";
-import { Timeout } from "oop-timers";
+import { ResponseStatusGroup } from "./const.js";
 
-const DATA_TIMEOUT = 5000;
-const FINISH_TIMEOUT = 3000;
+// Note: 0, 499 and
+// 499 is non-standard, but very popular nginx error code
+// @TODO make it configurable? because 499 probably will never reach the client anyway?
+// @TODO make >= 600 as unknown type?
 
-let x = 0;
+const types = {
+    [ResponseStatusGroup.Success]: (status: number) => status >= 200 && status < 300,
+    [ResponseStatusGroup.ClientError]: (status: number) => status >= 400 && status < 499, // 499 is intentional here
+    [ResponseStatusGroup.ServerError]: (status: number) => status >= 500 && status < 600,
+    [ResponseStatusGroup.Redirect]: (status: number) => status >= 300 && status < 400,
+    [ResponseStatusGroup.Aborted]: (status: number) => !status || status === 499,
+    [ResponseStatusGroup.Informational]: (status: number) => status >= 100 && status < 200,
+};
+
+const checkOrder = [
+    ResponseStatusGroup.Success,
+    ResponseStatusGroup.ClientError,
+    ResponseStatusGroup.ServerError,
+    ResponseStatusGroup.Redirect,
+    ResponseStatusGroup.Aborted,
+    ResponseStatusGroup.Informational,
+];
+const typesCount = checkOrder.length;
 
 /**
- * Downloads a file into writable stream
- *
- * @param {stream.Writable} writableStream
- * @param {ApiClient} api
- * @param {string} method - method to use
- * @param {string} url - absolute url or relative that will be joined with base url
- * @param {Object|null} [queryParams] - query params that will be added to `url`
- * @param {string|Object} [body] - request body. Used as-is when string or stringified according to given data
- * `type` when Object
- * @param {Options} [options] - options that will override defaults and options specified in the constructor
- * @returns {Promise<Response>}
+ * Matches HTTP status code to the type group
+ * @param {number} status - HTTP status code
  */
-const download = async ( // eslint-disable-line max-lines-per-function
-    writableStream: stream.Writable,
-    api: ApiClient,
-    method: string,
-    url: URLArgument,
-    queryParams?: Data | null,
-    body?: Data | null,
-    options?: Options | null,
-) => {
-    const res = await api.request(method, url, queryParams, body, {
-        ...options,
-        type: RequestType.stream,
-    });
+const matchStatus = (status: number) => {
+    for (let i = 0; i < typesCount; i++) {
+        const type = checkOrder[i]!;
+        const fn = types[type];
+        if (fn(status)) {
+            return type;
+        }
+    }
 
-    return new Promise<typeof res>((resolve, reject) => {
-        x++;
-        const id = x;
-        const resBody = (res.body as ResponseDataStream["body"])!;
+    // @TODO throw custom error with some details
+    // this could only happen on things like negative codes etc
+    throw new Error("Unknown HTTP status");
+};
 
-        let finished = false;
-        const safeResolve: typeof resolve = (value) => {
-            console.log(id, "resolving");
-            if (finished) {
-                // eslint-disable-next-line no-console
-                console.trace(id, "Called resolve on already finished promise");
-                return;
-            }
-            finished = true;
-            resolve(value);
-        };
-        const safeReject: typeof reject = (value) => {
-            console.log(id, "rejecting");
-            if (finished) {
-                // eslint-disable-next-line no-console
-                console.trace(id, "Called reject on already finished promise");
-                return;
-            }
-            finished = true;
-            reject(value);
-        };
-
-        const dataTimeoutTimer = new Timeout(
-            () => { safeReject(new Error("Readable stream timeout")); }, DATA_TIMEOUT, false,
-        );
-        const finishTimeoutTimer = new Timeout(
-            () => { safeReject(new Error("Writable stream not finished after readable did")); }, FINISH_TIMEOUT, false,
-        );
-
-        const timeoutCheck = new stream.Writable({
-            // eslint-disable-next-line no-undef
-            write(chunk: unknown, encoding: BufferEncoding, callback: (error?: (Error | null)) => void) {
-                dataTimeoutTimer.start();
-                callback(null);
-            },
-        });
-        resBody.pipe(timeoutCheck);
-        resBody.pipe(writableStream);
-        resBody.on("error", (err) => {
-            reject(new DownloadError(err));
-        });
-
-        resBody.on("end", () => {
-            finishTimeoutTimer.start();
-            dataTimeoutTimer.stop();
-            console.log(id, "READ STREAM ENDED");
-        });
-        writableStream.on("finish", () => {
-            console.log(id, "WRITE STREAM ENDED");
-            finishTimeoutTimer.stop();
-            safeResolve(res);
-        });
-    });
+/**
+ * Strips hash from the string (# and the rest of the string)
+ * @param str - source string
+ */
+const stripHash = (str: string) => {
+    const hashIndex = str.indexOf("#");
+    if (hashIndex === -1) {
+        return str;
+    }
+    return str.substring(0, hashIndex);
 };
 
 export {
-    download,
+    matchStatus,
+    stripHash,
 };
