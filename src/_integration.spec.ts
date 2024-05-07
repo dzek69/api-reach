@@ -141,6 +141,12 @@ describe("api-reach", () => {
         must(body.status).equal("ok");
     });
 
+    it.skip("TS random tests", async () => {
+        await localApi.request("get", "/anything/basic", {});
+        await localApi.get("/users/:id", {
+        });
+    });
+
     describe("creates proper instance", () => {
         it("for success response", async () => {
             registerMock(() => async (req, res) => res.send({}));

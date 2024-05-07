@@ -4,6 +4,8 @@ import qs from "qs";
 import { Timeout } from "oop-timers";
 import { noop, omit, pick, replace, wait } from "@ezez/utils";
 
+import type { AbortErrorDetails } from "./errors";
+import type { ApiResponse } from "./response/response.js";
 import type {
     AbortablePromise,
     ApiClientConfig,
@@ -18,9 +20,12 @@ import type {
     Options,
     RequestData,
     RequestOptions,
+    BodyType,
+    BodyTypeType,
+    HeadersType,
+    ParamsType,
+    QueryType,
 } from "./types";
-import type { AbortErrorDetails } from "./errors";
-import type { ApiResponse } from "./response/response.js";
 
 import { ClientErrorResponse, createResponse, ServerErrorResponse } from "./response/response.js";
 import { contentTypeMap, ExpectedResponseBodyType, RequestBodyType } from "./const.js";
@@ -305,16 +310,16 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
 
     public get<
         U extends keyof RL["get"] & string,
-        P extends RL["get"][U]["params"],
-        B extends RL["get"][U]["body"],
-        BT extends RL["get"][U]["bodyType"],
-        Q extends RL["get"][U]["query"],
-        H extends RL["get"][U]["headers"],
+        P extends ParamsType<RL["get"][U]>,
+        B extends BodyType<RL["get"][U]>,
+        BT extends BodyTypeType<RL["get"][U]>,
+        Q extends QueryType<RL["get"][U]>,
+        H extends HeadersType<RL["get"][U]>,
         D extends RequestData<P, B, BT, Q, H>,
         RB extends RL["get"][U]["response"],
         RT extends ExpectedResponseBodyType = T,
     >(
-        url: U, data?: D, options?: RequestOptions<RT, H>,
+        url: U, data: D, options?: RequestOptions<RT, H>,
     ): AbortablePromise<
         RT extends ExpectedResponseBodyType.json
             ? ApiResponse<"get", U, P, B, BT, Q, H, RB, RT> :
@@ -328,16 +333,16 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
 
     public post<
         U extends keyof RL["post"] & string,
-        P extends RL["post"][U]["params"],
-        B extends RL["post"][U]["body"],
-        BT extends RL["post"][U]["bodyType"],
-        Q extends RL["post"][U]["query"],
-        H extends RL["post"][U]["headers"],
+        P extends ParamsType<RL["post"][U]>,
+        B extends BodyType<RL["post"][U]>,
+        BT extends BodyTypeType<RL["post"][U]>,
+        Q extends QueryType<RL["post"][U]>,
+        H extends HeadersType<RL["post"][U]>,
         D extends RequestData<P, B, BT, Q, H>,
         RB extends RL["post"][U]["response"],
         RT extends ExpectedResponseBodyType = T,
     >(
-        url: U, data?: D, options?: RequestOptions<RT, H>,
+        url: U, data: D, options?: RequestOptions<RT, H>,
     ): AbortablePromise<RT extends ExpectedResponseBodyType.json
             ? ApiResponse<"post", U, P, B, BT, Q, H, RB, RT> :
             RT extends ExpectedResponseBodyType.stream ?
@@ -349,17 +354,17 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
 
     public request<
         Mthd extends string,
-        U extends keyof RL[Uppercase<Mthd>] & string,
-        P extends RL[Uppercase<Mthd>][U]["params"],
-        B extends RL[Uppercase<Mthd>][U]["body"],
-        BT extends RL[Uppercase<Mthd>][U]["bodyType"],
-        Q extends RL[Uppercase<Mthd>][U]["query"],
-        H extends RL[Uppercase<Mthd>][U]["headers"],
+        U extends keyof RL[Lowercase<Mthd>] & string,
+        P extends ParamsType<RL[Lowercase<Mthd>][U]>,
+        B extends BodyType<RL[Lowercase<Mthd>][U]>,
+        BT extends BodyTypeType<RL[Lowercase<Mthd>][U]>,
+        Q extends QueryType<RL[Lowercase<Mthd>][U]>,
+        H extends HeadersType<RL[Lowercase<Mthd>][U]>,
         D extends RequestData<P, B, BT, Q, H>,
-        RB extends RL[Uppercase<Mthd>][U]["response"],
+        RB extends RL[Lowercase<Mthd>][U]["response"],
         RT extends ExpectedResponseBodyType = T,
     >(
-        method: Mthd, url: U, data?: D, options?: RequestOptions<RT, H>,
+        method: Mthd, url: U, data: D, options?: RequestOptions<RT, H>,
     ): AbortablePromise<RT extends ExpectedResponseBodyType.json
             ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT> :
             RT extends ExpectedResponseBodyType.stream ?
@@ -372,17 +377,17 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
     // eslint-disable-next-line max-lines-per-function
     private _prepareAndSendRequest<
         Mthd extends string,
-        U extends keyof RL[Uppercase<Mthd>] & string,
-        P extends RL[Uppercase<Mthd>][U]["params"],
-        B extends RL[Uppercase<Mthd>][U]["body"],
-        BT extends RL[Uppercase<Mthd>][U]["bodyType"],
-        Q extends RL[Uppercase<Mthd>][U]["query"],
-        H extends RL[Uppercase<Mthd>][U]["headers"],
+        U extends keyof RL[Lowercase<Mthd>] & string,
+        P extends ParamsType<RL[Lowercase<Mthd>][U]>,
+        B extends BodyType<RL[Lowercase<Mthd>][U]>,
+        BT extends BodyTypeType<RL[Lowercase<Mthd>][U]>,
+        Q extends QueryType<RL[Lowercase<Mthd>][U]>,
+        H extends HeadersType<RL[Lowercase<Mthd>][U]>,
         D extends RequestData<P, B, BT, Q, H>,
-        RB extends RL[Uppercase<Mthd>][U]["response"],
+        RB extends RL[Lowercase<Mthd>][U]["response"],
         RT extends ExpectedResponseBodyType = T,
     >(
-        method: Mthd, url: U, data?: D, options?: RequestOptions<RT, H>,
+        method: Mthd, url: U, data: D, options?: RequestOptions<RT, H>,
     ): AbortablePromise<RT extends ExpectedResponseBodyType.json
             ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>
             : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>> {
@@ -392,9 +397,11 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
             ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>
             : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>;
 
-        const finalOptions = this._buildFetchOptions(options ?? {}, method.toUpperCase(), data?.body, data?.headers);
-        const finalUrl = this._buildUrl(url, data?.params, data?.query, finalOptions);
-        const request = new ApiRequest(method.toUpperCase(), { url: url, fullUrl: finalUrl }, data, finalOptions);
+        const _data: D | undefined = data as D | undefined;
+
+        const finalOptions = this._buildFetchOptions(options ?? {}, method.toUpperCase(), _data?.body, _data?.headers);
+        const finalUrl = this._buildUrl(url, _data?.params, _data?.query, finalOptions);
+        const request = new ApiRequest(method.toUpperCase(), { url: url, fullUrl: finalUrl }, _data, finalOptions);
 
         let cacheKey: string | undefined = undefined,
             currentController: AbortController | undefined = undefined,
@@ -641,6 +648,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
             bodyData: bodyData,
             status: response.status,
             statusText: response.statusText,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument,@typescript-eslint/no-explicit-any
             headers: Object.fromEntries((response.headers as Headers & { entries: () => any }).entries()),
         });
     }
