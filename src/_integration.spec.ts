@@ -743,7 +743,7 @@ describe("api-reach", () => {
                 registerMock((req) => {
                     if (req.method === "GET" && req.url === "/anything/advanced") {
                         return (_, res) => {
-                            res.send({ route: "advanced" });
+                            return res.send({ route: "advanced" });
                         };
                     }
                     return null;
@@ -752,7 +752,7 @@ describe("api-reach", () => {
                 registerMock((req) => {
                     if (req.method === "GET" && req.url === "/anything/basic") {
                         return (_, res) => {
-                            res.send({ route: "basic" });
+                            return res.send({ route: "basic" });
                         };
                     }
                     return null;

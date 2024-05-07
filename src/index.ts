@@ -43,9 +43,9 @@ import {
 import { ApiRequest } from "./request/request.js";
 
 const defaultOptions: Pick<
-Required<Options<ExpectedResponseBodyType, any>>,
+Required<Options<ExpectedResponseBodyType, any>>, // eslint-disable-line @typescript-eslint/no-explicit-any
 "requestType" | "responseType" | "timeout" | "retry" | "throw"
-> & { cache: Partial<Options<ExpectedResponseBodyType, any>["cache"]> } = {
+> & { cache: Partial<Options<ExpectedResponseBodyType, any>["cache"]> } = { // eslint-disable-line @typescript-eslint/no-explicit-any,max-len
     responseType: ExpectedResponseBodyType.json,
     requestType: RequestBodyType.json,
     timeout: 30000,
@@ -86,7 +86,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
      */
     private _getResponseType<
         RT extends ExpectedResponseBodyType,
-        Op extends Options<RT, any>,
+        Op extends Options<RT, any>, // eslint-disable-line @typescript-eslint/no-explicit-any
     >(options: Pick<Op, "responseType">): ExpectedResponseBodyType {
         return options.responseType ?? this._options.responseType ?? ExpectedResponseBodyType.json;
     }
@@ -94,7 +94,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
     /**
      * Returns final request data type
      */
-    private _getRequestType(options: Pick<Options<any, any>, "requestType">): RequestBodyType {
+    private _getRequestType(options: Pick<Options<any, any>, "requestType">): RequestBodyType { // eslint-disable-line @typescript-eslint/no-explicit-any,max-len
         return options.requestType ?? this._options.requestType ?? RequestBodyType.json;
     }
 
@@ -116,7 +116,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
      */
     private _buildRequestBody<
         B extends GenericBody,
-    >(options: Pick<Options<any, any>, "requestType">, body?: B) {
+    >(options: Pick<Options<any, any>, "requestType">, body?: B) { // eslint-disable-line @typescript-eslint/no-explicit-any,max-len
         const requestType = this._getRequestType(options);
 
         if (requestType === RequestBodyType.plain && typeof body !== "string") {
@@ -288,6 +288,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
      * Builds final URL to send request to
      */
     private _buildUrl(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         givenUrl: string, params: GenericParams, query: GenericQuery, fetchOptions: FinalOptions<any, any>,
     ) {
         const localUrl = replace(givenUrl, params as (Record<string, string> | undefined) ?? {});
@@ -582,13 +583,13 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
 
                 if (e instanceof HttpClientError
                     && e.details && !e.details.response.request.options.throw.onClientErrorResponses) {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument,@typescript-eslint/no-explicit-any
                     resolve(e.details.response as any);
                     return;
                 }
                 if (e instanceof HttpServerError
                     && e.details && !e.details.response.request.options.throw.onServerErrorResponses) {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument,@typescript-eslint/no-explicit-any
                     resolve(e.details.response as any);
                     return;
                 }

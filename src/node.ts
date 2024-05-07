@@ -29,7 +29,7 @@ let x = 0;
  * @param [options] - options that will override defaults and options specified in the constructor
  * @returns
  */
-const download = async <Client extends ApiClient<ExpectedResponseBodyType.stream, any>>( // eslint-disable-line max-lines-per-function,max-len
+const download = async <Client extends ApiClient<ExpectedResponseBodyType.stream, any>>( // eslint-disable-line max-lines-per-function,max-len,@typescript-eslint/no-explicit-any
     writableStream: stream.Writable,
     api: Client,
     method: string,

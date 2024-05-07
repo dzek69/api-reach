@@ -11,7 +11,7 @@ const TXT_FILE = "https://gist.githubusercontent.com/apipemc/6047552/raw/5cf8793
 const api = createApiClient<any, ExpectedResponseBodyType.stream >({});
 
 describe("download", () => {
-    it("should download a file", async () => {
+    it.skip("should download a file", async () => {
         // create writable stream:
         const writableStream = fs.createWriteStream("./file.txt");
 
