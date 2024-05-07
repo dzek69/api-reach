@@ -126,6 +126,18 @@ describe("api-reach", () => {
     const localApi = createApiClient<ResponsesList>({
         base: "http://127.0.0.1:9192",
     });
+    const localApiNoType = createApiClient<{
+        get: Record<string, {
+            response: any;
+            body: any;
+            query: any;
+            bodyType: any;
+            headers: any;
+            params: any;
+        }>;
+    }>({
+        base: "http://127.0.0.1:9192",
+    });
 
     it("TS", async () => {
         registerMock((req, res) => {
@@ -143,14 +155,14 @@ describe("api-reach", () => {
 
     it.skip("TS random tests", async () => {
         await localApi.request("get", "/anything/basic", {});
-        await localApi.get("/users/:id", {
-        });
+        await localApi.get("/users/:id", {});
+        await localApiNoType.get("/whatever", {});
     });
 
     describe("creates proper instance", () => {
         it("for success response", async () => {
             registerMock(() => async (req, res) => res.send({}));
-            const response = await localApi.get("/");
+            const response = await localApi.get("/", {});
             must(response).not.be.instanceof(InformationalResponse);
             must(response).be.instanceof(SuccessResponse);
             must(response).not.be.instanceof(RedirectResponse);
