@@ -731,3 +731,7 @@ export {
     ClientErrorResponse,
     ServerErrorResponse,
 } from "./response/response.js";
+
+export type {
+    ApiClient,
+};

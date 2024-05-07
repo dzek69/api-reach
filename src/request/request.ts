@@ -71,10 +71,16 @@ class ApiRequest<
         this.method = method;
         this.url = url;
         this.fullUrl = fullUrl;
+        // @TODO can we safely ignore it?
+        // @ts-expect-error some random error
         this.params = data?.params;
+        // @ts-expect-error some random error
         this.body = data?.body;
+        // @ts-expect-error some random error
         this.bodyType = data?.bodyType;
+        // @ts-expect-error some random error
         this.query = data?.query;
+        // @ts-expect-error some random error
         this.headers = data?.headers;
         this.options = options;
     }

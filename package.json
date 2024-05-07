@@ -1,6 +1,6 @@
 {
   "name": "api-reach",
-  "version": "0.12.3",
+  "version": "0.12.3+",
   "repository": "git@github.com:dzek69/api-reach.git",
   "author": "Jacek Nowacki @dzek69 <git-public@dzek.eu>",
   "license": "MIT",
@@ -28,6 +28,11 @@
       "require": "./dist/index.js",
       "types": "./esm/index.d.ts",
       "default": "./esm/index.js"
+    },
+    "./node": {
+      "require": "./dist/node.js",
+      "types": "./esm/node.d.ts",
+      "default": "./esm/node.js"
     }
   },
   "main": "./dist/index.js",
