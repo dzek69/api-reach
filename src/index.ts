@@ -8,10 +8,10 @@ import type { AbortErrorDetails } from "./errors";
 import type { ApiResponse } from "./response/response.js";
 import type {
     AbortablePromise,
-    ApiClientConfig,
     ApiEndpoints,
     CachedData,
     CacheOptions,
+    Dependencies,
     FinalOptions,
     GenericBody,
     GenericHeaders,
@@ -25,6 +25,7 @@ import type {
     HeadersType,
     ParamsType,
     QueryType,
+    ValidateApiEndpoints,
 } from "./types";
 
 import { ClientErrorResponse, createResponse, ServerErrorResponse } from "./response/response.js";
@@ -60,12 +61,6 @@ Required<Options<ExpectedResponseBodyType, any>>, // eslint-disable-line @typesc
     },
 };
 
-interface Dependencies {
-    fetch: typeof fetch;
-    URL: typeof URL;
-    qsStringify: (data: unknown) => string;
-}
-
 class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
     private readonly _options: Options<T, GenericHeaders>;
 
@@ -74,9 +69,11 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
     public constructor(options?: Options<T, GenericHeaders>, dependencies?: Partial<Dependencies>) {
         this._options = options ?? {};
         this._dependencies = {
+            // TODO this will crash on envs without these, fix by creating a function that "fills missing"
             fetch: fetch,
             URL: URL,
             qsStringify: qs.stringify,
+            AbortController: AbortController,
             ...dependencies,
         };
     }
@@ -471,7 +468,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
                 while (tryNo === 0 || finalOptions.retry.shouldRetry({ tryNo: tryNo + 1 })) {
                     tryNo++;
                     let timedoutLocal = false;
-                    currentController = new AbortController();
+                    currentController = new this._dependencies.AbortController();
                     // eslint-disable-next-line @typescript-eslint/no-loop-func
                     const singleTimeout = new Timeout(() => {
                         timedoutLocal = true;
@@ -715,8 +712,8 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
 
 const createApiClient = <
     RSP extends ApiEndpoints, T extends ExpectedResponseBodyType = ExpectedResponseBodyType.json,
->(options: Options<T, GenericHeaders>, dependencies?: ApiClientConfig) => {
-    return new ApiClient<T, RSP>(options);
+>(options: Options<T, GenericHeaders>, dependencies?: Dependencies) => {
+    return new ApiClient<T, RSP>(options, dependencies);
 };
 
 export {
@@ -737,4 +734,5 @@ export type {
     ApiClient,
     ExpectedResponseBodyType,
     ApiEndpoints,
+    ValidateApiEndpoints,
 };

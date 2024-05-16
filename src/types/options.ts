@@ -94,10 +94,11 @@ type FinalOptions<
     };
 };
 
-interface ApiClientConfig {
+interface Dependencies {
     fetch: typeof fetch;
     URL: typeof URL;
     AbortController: typeof AbortController;
+    qsStringify: (data: unknown) => string;
 }
 
 export type {
@@ -105,5 +106,5 @@ export type {
     CacheOptions,
     RequestOptions,
     FinalOptions,
-    ApiClientConfig,
+    Dependencies,
 };

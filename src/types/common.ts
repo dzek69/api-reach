@@ -11,7 +11,7 @@ type RecordLike<T> = {
     [key: string]: T;
 };
 
-type GenericJSONResponse = RecordLike<unknown>;
+type GenericJSONResponse = RecordLike<unknown> | JSONFriendly[];
 type GenericParams = RecordLike<BasicJSONTypes> | undefined;
 type GenericBody = RecordLike<unknown> | string | undefined;
 type GenericQuery = RecordLike<unknown> | undefined;
@@ -20,7 +20,7 @@ type GenericHeaders = RecordLike<string> | undefined;
 /**
  * This type is a constraint for the ApiClient class, it represents a generic list of responses for methods and urls
  */
-type ApiEndpoints = Record<string, Record<string, {
+type ApiEndpoints = RecordLike<RecordLike<{
     /**
      * Expected response type (not validated, just assumed)
      */
@@ -44,10 +44,13 @@ type ApiEndpoints = Record<string, Record<string, {
     headers?: GenericHeaders;
 }>>;
 
+type ValidateApiEndpoints<T extends ApiEndpoints> = T;
+
 export type {
     BasicJSONTypes,
     JSONFriendly,
     ApiEndpoints,
+    ValidateApiEndpoints,
     AbortablePromise,
 
     GenericJSONResponse,
