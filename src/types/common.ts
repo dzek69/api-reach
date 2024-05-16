@@ -7,11 +7,15 @@ type AbortablePromise<T> = {
     abort: () => void;
 } & Promise<T>;
 
-type GenericJSONResponse = Record<string, unknown>;
-type GenericParams = Record<string, BasicJSONTypes> | undefined;
-type GenericBody = Record<string, unknown> | string | undefined;
-type GenericQuery = Record<string, unknown> | undefined;
-type GenericHeaders = Record<string, string> | undefined;
+type RecordLike<T> = {
+    [key: string]: T;
+};
+
+type GenericJSONResponse = RecordLike<unknown>;
+type GenericParams = RecordLike<BasicJSONTypes> | undefined;
+type GenericBody = RecordLike<unknown> | string | undefined;
+type GenericQuery = RecordLike<unknown> | undefined;
+type GenericHeaders = RecordLike<string> | undefined;
 
 /**
  * This type is a constraint for the ApiClient class, it represents a generic list of responses for methods and urls

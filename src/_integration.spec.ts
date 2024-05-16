@@ -1013,7 +1013,7 @@ describe("api-reach", () => {
                 },
             });
 
-            const response3 = await localApi.get("/anything/basic", undefined, {
+            const response3 = await localApi.get("/anything/basic", {}, {
                 cache: cacheOpts,
             });
 

@@ -735,4 +735,6 @@ export {
 
 export type {
     ApiClient,
+    ExpectedResponseBodyType,
+    ApiEndpoints,
 };
