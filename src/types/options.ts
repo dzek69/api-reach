@@ -1,5 +1,5 @@
 import type { RequestRedirect as NodeFetchRequestRedirect } from "node-fetch";
-import type { ExpectedResponseBodyType, RequestBodyType } from "../const";
+import type { ExpectedResponseBodyType } from "../const";
 import type { GenericHeaders } from "./common";
 import type {
     CacheGetKey, CacheGetTTL, CacheInterface, CacheShouldCacheResponse, CacheSaveStrategy, CacheLoadStrategy,
@@ -53,7 +53,6 @@ interface CacheOptions {
 interface Options<RT extends ExpectedResponseBodyType, H extends GenericHeaders> {
     base?: string;
     responseType?: RT;
-    requestType?: RequestBodyType;
     retry?: RetryOptions;
     timeout?: number | TimeoutOptions;
     cache?: CacheOptions | undefined;
@@ -88,7 +87,8 @@ type FinalOptions<
     retry: AdvancedRetry;
     fetchOptions?: {
         method: string;
-        body?: string;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        body?: any; // @TODO better type
         headers: H;
         redirect?: NodeFetchRequestRedirect;
     };
@@ -97,6 +97,7 @@ type FinalOptions<
 interface Dependencies {
     fetch: typeof fetch;
     URL: typeof URL;
+    FormData: typeof FormData;
     AbortController: typeof AbortController;
     qsStringify: (data: unknown) => string;
 }

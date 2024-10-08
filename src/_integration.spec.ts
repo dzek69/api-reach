@@ -138,6 +138,9 @@ describe("api-reach", () => {
     }>({
         base: "http://127.0.0.1:9192",
     });
+    const httpBinApi = createApiClient<ResponsesList>({
+        base: "https://httpbin.org",
+    });
 
     it("TS", async () => {
         registerMock((req, res) => {
@@ -1127,7 +1130,7 @@ describe("api-reach", () => {
                 },
             });
 
-            request4.then(() => {
+            await request4.then(() => {
                 throw new Error("Expected request to fail");
             }, (e: unknown) => {
                 must(e).be.instanceof(CacheMissError);
@@ -1146,4 +1149,34 @@ describe("api-reach", () => {
 
     // TODO strip hash from relative url
     // TODO throw if hash given for base url
+
+    describe("supports FormData", () => {
+        it('should not crash sending form data', async () => {
+            registerMock(() => (req, res) => {
+                console.log(req.body)
+                return res.send({h: req.headers});
+            });
+
+            const formData = new FormData();
+            formData.append("name", "John");
+            formData.append("a", new Blob(["hello"]), "hello.txt");
+
+            const response = await httpBinApi.post("/post", {
+                body: formData,
+                bodyType: "formData",
+            });
+            // const response = await fetch("http://127.0.0.1:9192/file", {
+            //     method: "POST",
+            //     body: formData,
+            // });
+            console.log(response.status, response.body)
+
+            // await fetch("http://httpbin.org/post", {
+            //     method: "POST",
+            //     body: formData,
+            // }).then(async (response) => {
+            //     console.log(response.status, await response.json());
+            // });
+        });
+    })
 });

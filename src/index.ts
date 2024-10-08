@@ -9,6 +9,8 @@ import type { ApiResponse } from "./response/response.js";
 import type {
     AbortablePromise,
     ApiEndpoints,
+    BodyType,
+    BodyTypeType,
     CachedData,
     CacheOptions,
     Dependencies,
@@ -17,38 +19,35 @@ import type {
     GenericHeaders,
     GenericParams,
     GenericQuery,
-    Options,
-    RequestData,
-    RequestOptions,
-    BodyType,
-    BodyTypeType,
     HeadersType,
+    Options,
     ParamsType,
     QueryType,
+    RequestData,
+    RequestOptions,
     ValidateApiEndpoints,
 } from "./types";
 
 import { ClientErrorResponse, createResponse, ServerErrorResponse } from "./response/response.js";
-import { contentTypeMap, ExpectedResponseBodyType, RequestBodyType } from "./const.js";
+import { ExpectedResponseBodyType, RequestBodyType, requestContentTypeMap } from "./const.js";
 import {
     AbortError,
+    ApiReachError,
+    CacheMissError,
     HttpClientError,
     HttpError,
     HttpServerError,
     ResponseDataTypeMismatchError,
     TimeoutError,
     UnknownError,
-    CacheMissError,
-    ApiReachError,
 } from "./errors.js";
 import { ApiRequest } from "./request/request.js";
 
 const defaultOptions: Pick<
 Required<Options<ExpectedResponseBodyType, any>>, // eslint-disable-line @typescript-eslint/no-explicit-any
-"requestType" | "responseType" | "timeout" | "retry" | "throw"
+"responseType" | "timeout" | "retry" | "throw"
 > & { cache: Partial<Options<ExpectedResponseBodyType, any>["cache"]> } = { // eslint-disable-line @typescript-eslint/no-explicit-any,max-len
     responseType: ExpectedResponseBodyType.json,
-    requestType: RequestBodyType.json,
     timeout: 30000,
     retry: 0,
     throw: {
@@ -61,7 +60,7 @@ Required<Options<ExpectedResponseBodyType, any>>, // eslint-disable-line @typesc
     },
 };
 
-class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
+class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
     private readonly _options: Options<T, GenericHeaders>;
 
     private readonly _dependencies: Dependencies;
@@ -72,6 +71,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
             // TODO this will crash on envs without these, fix by creating a function that "fills missing"
             fetch: fetch,
             URL: URL,
+            FormData: FormData,
             qsStringify: qs.stringify,
             AbortController: AbortController,
             ...dependencies,
@@ -91,44 +91,69 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
     /**
      * Returns final request data type
      */
-    private _getRequestType(options: Pick<Options<any, any>, "requestType">): RequestBodyType { // eslint-disable-line @typescript-eslint/no-explicit-any,max-len
-        return options.requestType ?? this._options.requestType ?? RequestBodyType.json;
+    private _getRequestType<
+        H extends GenericHeaders,
+        M extends string,
+        B extends GenericBody,
+        P extends GenericParams,
+        Q extends GenericQuery,
+        BT extends BodyTypeType<Endp[M]>,
+        D extends RequestData<P, B, BT, Q, H>,
+    >(data: D): RequestBodyType {
+        return data.bodyType ?? RequestBodyType.json;
     }
 
     /**
      * Get request content type
-     * @param options
-     * @private
      */
-    private _getContentType(options: Pick<Options<any, any>, "responseType">) { // eslint-disable-line @typescript-eslint/no-explicit-any,max-len
-        const type = this._getResponseType(options);
-        return contentTypeMap[type];
+    private _getRequestContentType<
+        H extends GenericHeaders,
+        M extends string,
+        B extends GenericBody,
+        P extends GenericParams,
+        Q extends GenericQuery,
+        BT extends BodyTypeType<Endp[M]>,
+        D extends RequestData<P, B, BT, Q, H>,
+    >(data: D) {
+        const type = this._getRequestType(data);
+        console.log("tt", type);
+        return requestContentTypeMap[type];
     }
 
     /**
      * Prepares request body to send
-     * @param options
-     * @param body
-     * @private
+     * @param data
      */
     private _buildRequestBody<
+        H extends GenericHeaders,
+        M extends string,
         B extends GenericBody,
-    >(options: Pick<Options<any, any>, "requestType">, body?: B) { // eslint-disable-line @typescript-eslint/no-explicit-any,max-len
-        const requestType = this._getRequestType(options);
+        P extends GenericParams,
+        Q extends GenericQuery,
+        BT extends BodyTypeType<Endp[M]>,
+        D extends RequestData<P, B, BT, Q, H>,
+    >(data: D) {
+        const requestType = this._getRequestType(data);
 
-        if (requestType === RequestBodyType.plain && typeof body !== "string") {
+        if (requestType === RequestBodyType.plain && typeof data.body !== "string") {
             throw new Error("Body must be a string when request type is set to plain text");
         }
 
-        if (typeof body === "string") {
-            return body;
+        const isFormData = data.body instanceof this._dependencies.FormData;
+        if (requestType === RequestBodyType.formData && !isFormData) {
+            throw new Error("Body must be a FormData object when request type is set to form data");
+        }
+
+        if (isFormData || typeof data.body === "string") {
+            return data.body;
         }
 
         if (requestType === RequestBodyType.json) {
-            return JSON.stringify(body);
+            return JSON.stringify(data.body);
         }
+
         if (requestType === RequestBodyType.urlencoded) {
-            return this._dependencies.qsStringify(body);
+            return this._dependencies.qsStringify(data.body);
         }
 
         return null;
@@ -140,18 +165,22 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
         H extends GenericHeaders,
         M extends string,
         B extends GenericBody,
-    >(options: RequestOptions<RT, H>, method: M, body?: B, headers?: H) {
+        P extends GenericParams,
+        Q extends GenericQuery,
+        BT extends BodyTypeType<Endp[M]>,
+        D extends RequestData<P, B, BT, Q, H>,
+    >(options: RequestOptions<RT, H>, method: M, data: D | undefined) {
         const instanceHeaders = this._options.fetchOptions?.headers ?? {};
-        const requestHeaders = headers ?? {};
+        const requestHeaders = data?.headers ?? {};
 
         const contentType: { "Content-Type"?: string } = {};
-        const bodyOptions: { body?: string } = {};
-        if (body != null) {
-            const ct = this._getContentType(options);
+        const bodyOptions: { body?: unknown } = {}; // TODO better type?
+        if (data?.body != null) {
+            const ct = this._getRequestContentType(data);
             if (ct != null) {
                 contentType["Content-Type"] = ct;
             }
-            const bd = this._buildRequestBody(options, body);
+            const bd = this._buildRequestBody(data);
             if (bd != null) {
                 bodyOptions.body = bd;
             }
@@ -307,14 +336,14 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
     }
 
     public get<
-        U extends keyof RL["get"] & string,
-        P extends ParamsType<RL["get"][U]>,
-        B extends BodyType<RL["get"][U]>,
-        BT extends BodyTypeType<RL["get"][U]>,
-        Q extends QueryType<RL["get"][U]>,
-        H extends HeadersType<RL["get"][U]>,
+        U extends keyof Endp["get"] & string,
+        P extends ParamsType<Endp["get"][U]>,
+        B extends BodyType<Endp["get"][U]>,
+        BT extends BodyTypeType<Endp["get"][U]>,
+        Q extends QueryType<Endp["get"][U]>,
+        H extends HeadersType<Endp["get"][U]>,
         D extends RequestData<P, B, BT, Q, H>,
-        RB extends RL["get"][U]["response"],
+        RB extends Endp["get"][U]["response"],
         RT extends ExpectedResponseBodyType = T,
     >(
         url: U, data: D, options?: RequestOptions<RT, H>,
@@ -330,14 +359,14 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
     }
 
     public post<
-        U extends keyof RL["post"] & string,
-        P extends ParamsType<RL["post"][U]>,
-        B extends BodyType<RL["post"][U]>,
-        BT extends BodyTypeType<RL["post"][U]>,
-        Q extends QueryType<RL["post"][U]>,
-        H extends HeadersType<RL["post"][U]>,
+        U extends keyof Endp["post"] & string,
+        P extends ParamsType<Endp["post"][U]>,
+        B extends BodyType<Endp["post"][U]>,
+        BT extends BodyTypeType<Endp["post"][U]>,
+        Q extends QueryType<Endp["post"][U]>,
+        H extends HeadersType<Endp["post"][U]>,
         D extends RequestData<P, B, BT, Q, H>,
-        RB extends RL["post"][U]["response"],
+        RB extends Endp["post"][U]["response"],
         RT extends ExpectedResponseBodyType = T,
     >(
         url: U, data: D, options?: RequestOptions<RT, H>,
@@ -352,14 +381,14 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
 
     public request<
         Mthd extends string,
-        U extends keyof RL[Lowercase<Mthd>] & string,
-        P extends ParamsType<RL[Lowercase<Mthd>][U]>,
-        B extends BodyType<RL[Lowercase<Mthd>][U]>,
-        BT extends BodyTypeType<RL[Lowercase<Mthd>][U]>,
-        Q extends QueryType<RL[Lowercase<Mthd>][U]>,
-        H extends HeadersType<RL[Lowercase<Mthd>][U]>,
+        U extends keyof Endp[Lowercase<Mthd>] & string,
+        P extends ParamsType<Endp[Lowercase<Mthd>][U]>,
+        B extends BodyType<Endp[Lowercase<Mthd>][U]>,
+        BT extends BodyTypeType<Endp[Lowercase<Mthd>][U]>,
+        Q extends QueryType<Endp[Lowercase<Mthd>][U]>,
+        H extends HeadersType<Endp[Lowercase<Mthd>][U]>,
         D extends RequestData<P, B, BT, Q, H>,
-        RB extends RL[Lowercase<Mthd>][U]["response"],
+        RB extends Endp[Lowercase<Mthd>][U]["response"],
         RT extends ExpectedResponseBodyType = T,
     >(
         method: Mthd, url: U, data: D, options?: RequestOptions<RT, H>,
@@ -375,14 +404,14 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
     // eslint-disable-next-line max-lines-per-function
     private _prepareAndSendRequest<
         Mthd extends string,
-        U extends keyof RL[Lowercase<Mthd>] & string,
-        P extends ParamsType<RL[Lowercase<Mthd>][U]>,
-        B extends BodyType<RL[Lowercase<Mthd>][U]>,
-        BT extends BodyTypeType<RL[Lowercase<Mthd>][U]>,
-        Q extends QueryType<RL[Lowercase<Mthd>][U]>,
-        H extends HeadersType<RL[Lowercase<Mthd>][U]>,
+        U extends keyof Endp[Lowercase<Mthd>] & string,
+        P extends ParamsType<Endp[Lowercase<Mthd>][U]>,
+        B extends BodyType<Endp[Lowercase<Mthd>][U]>,
+        BT extends BodyTypeType<Endp[Lowercase<Mthd>][U]>,
+        Q extends QueryType<Endp[Lowercase<Mthd>][U]>,
+        H extends HeadersType<Endp[Lowercase<Mthd>][U]>,
         D extends RequestData<P, B, BT, Q, H>,
-        RB extends RL[Lowercase<Mthd>][U]["response"],
+        RB extends Endp[Lowercase<Mthd>][U]["response"],
         RT extends ExpectedResponseBodyType = T,
     >(
         method: Mthd, url: U, data: D, options?: RequestOptions<RT, H>,
@@ -397,7 +426,7 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
 
         const _data: D | undefined = data as D | undefined;
 
-        const finalOptions = this._buildFetchOptions(options ?? {}, method.toUpperCase(), _data?.body, _data?.headers);
+        const finalOptions = this._buildFetchOptions(options ?? {}, method.toUpperCase(), _data);
         const finalUrl = this._buildUrl(url, _data?.params, _data?.query, finalOptions);
         const request = new ApiRequest(method.toUpperCase(), { url: url, fullUrl: finalUrl }, _data, finalOptions);
 
@@ -618,13 +647,13 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
 
     private async _sendRequest<
         Mthd extends string,
-        U extends keyof RL[Uppercase<Mthd>] & string,
-        P extends RL[Uppercase<Mthd>][U]["params"],
-        B extends RL[Uppercase<Mthd>][U]["body"],
-        BT extends RL[Uppercase<Mthd>][U]["bodyType"],
-        Q extends RL[Uppercase<Mthd>][U]["query"],
-        H extends RL[Uppercase<Mthd>][U]["headers"],
-        RB extends RL[Uppercase<Mthd>][U]["response"],
+        U extends keyof Endp[Uppercase<Mthd>] & string,
+        P extends Endp[Uppercase<Mthd>][U]["params"],
+        B extends Endp[Uppercase<Mthd>][U]["body"],
+        BT extends Endp[Uppercase<Mthd>][U]["bodyType"],
+        Q extends Endp[Uppercase<Mthd>][U]["query"],
+        H extends Endp[Uppercase<Mthd>][U]["headers"],
+        RB extends Endp[Uppercase<Mthd>][U]["response"],
         // eslint-disable-next-line @typescript-eslint/no-use-before-define
         AReq extends ApiRequest<Mthd, U, P, B, BT, Q, H, RT>,
         RT extends ExpectedResponseBodyType = T,
@@ -632,6 +661,12 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
         ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>
         : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>> {
         const h = request.options.fetchOptions.headers;
+
+        console.log(request.fullUrl, {
+            ...omit(request.options.fetchOptions, ["headers"]),
+            ...(h ? { headers: h } : {}),
+            signal,
+        });
 
         const response = await this._dependencies.fetch(request.fullUrl, {
             ...omit(request.options.fetchOptions, ["headers"]),
@@ -653,13 +688,13 @@ class ApiClient<T extends ExpectedResponseBodyType, RL extends ApiEndpoints> {
 
     private _buildResponse<
         Mthd extends string,
-        U extends keyof RL[Uppercase<Mthd>] & string,
-        P extends RL[Uppercase<Mthd>][U]["params"],
-        B extends RL[Uppercase<Mthd>][U]["body"],
-        BT extends RL[Uppercase<Mthd>][U]["bodyType"],
-        Q extends RL[Uppercase<Mthd>][U]["query"],
-        H extends RL[Uppercase<Mthd>][U]["headers"],
-        RB extends RL[Uppercase<Mthd>][U]["response"],
+        U extends keyof Endp[Uppercase<Mthd>] & string,
+        P extends Endp[Uppercase<Mthd>][U]["params"],
+        B extends Endp[Uppercase<Mthd>][U]["body"],
+        BT extends Endp[Uppercase<Mthd>][U]["bodyType"],
+        Q extends Endp[Uppercase<Mthd>][U]["query"],
+        H extends Endp[Uppercase<Mthd>][U]["headers"],
+        RB extends Endp[Uppercase<Mthd>][U]["response"],
         // eslint-disable-next-line @typescript-eslint/no-use-before-define
         AReq extends ApiRequest<Mthd, U, P, B, BT, Q, H, RT>,
         RT extends ExpectedResponseBodyType = T,
