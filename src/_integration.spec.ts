@@ -90,7 +90,7 @@ describe("api-reach", () => {
                 throw new Error("No matching mock found!");
             }
 
-            const mock = mockHandlers[mockIndex](req, res);
+            const mock = mockHandlers[mockIndex]!(req, res);
             mockHandlers.splice(mockIndex, 1);
 
             mock(req, res);
@@ -1126,11 +1126,11 @@ describe("api-reach", () => {
             const request4 = localApi.get("/anything/basic", undefined, {
                 cache: {
                     ...cacheOpts,
-                    loadStrategy: "prefer-cache",
+                    loadStrategy: "cache-only",
                 },
             });
 
-            await request4.then(() => {
+            await request4.then((r) => {
                 throw new Error("Expected request to fail");
             }, (e: unknown) => {
                 must(e).be.instanceof(CacheMissError);
@@ -1152,11 +1152,6 @@ describe("api-reach", () => {
 
     describe("supports FormData", () => {
         it('should not crash sending form data', async () => {
-            registerMock(() => (req, res) => {
-                console.log(req.body)
-                return res.send({h: req.headers});
-            });
-
             const formData = new FormData();
             formData.append("name", "John");
             formData.append("a", new Blob(["hello"]), "hello.txt");
@@ -1165,18 +1160,13 @@ describe("api-reach", () => {
                 body: formData,
                 bodyType: "formData",
             });
-            // const response = await fetch("http://127.0.0.1:9192/file", {
-            //     method: "POST",
-            //     body: formData,
-            // });
-            console.log(response.status, response.body)
-
-            // await fetch("http://httpbin.org/post", {
-            //     method: "POST",
-            //     body: formData,
-            // }).then(async (response) => {
-            //     console.log(response.status, await response.json());
-            // });
+            must(response.status).equal(200);
+            must(response.body.form).eql({
+                name: "John",
+            });
+            must(response.body.files).eql({
+                a: "hello",
+            });
         });
     })
 });
