@@ -56,7 +56,19 @@ const stripHash = (str: string) => {
     return str.substring(0, hashIndex);
 };
 
+const getFetch = () => {
+    if (typeof window !== "undefined") {
+        // eslint-disable-next-line no-undef
+        return window.fetch.bind(window);
+    }
+    if (typeof fetch !== "undefined") {
+        return fetch;
+    }
+    return null;
+};
+
 export {
     matchStatus,
     stripHash,
+    getFetch,
 };

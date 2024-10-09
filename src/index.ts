@@ -42,6 +42,7 @@ import {
     UnknownError,
 } from "./errors.js";
 import { ApiRequest } from "./request/request.js";
+import {getFetch} from "./utils";
 
 const defaultOptions: Pick<
 Required<Options<ExpectedResponseBodyType, any>>, // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -69,13 +70,18 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
         this._options = options ?? {};
         this._dependencies = {
             // TODO this will crash on envs without these, fix by creating a function that "fills missing"
-            fetch: fetch,
+            fetch: getFetch() as typeof fetch,
             URL: URL,
             FormData: FormData,
             qsStringify: qs.stringify,
             AbortController: AbortController,
             ...dependencies,
         };
+
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        if (!this._dependencies.fetch) {
+            throw new TypeError("No fetch implementation found, please provide fetch function in dependencies");
+        }
     }
 
     /**
