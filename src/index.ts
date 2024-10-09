@@ -100,6 +100,7 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
         BT extends BodyTypeType<Endp[M]>,
         D extends RequestData<P, B, BT, Q, H>,
     >(data: D): RequestBodyType {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         return data.bodyType ?? RequestBodyType.json;
     }
 
@@ -116,7 +117,6 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
         D extends RequestData<P, B, BT, Q, H>,
     >(data: D) {
         const type = this._getRequestType(data);
-        console.log("tt", type);
         return requestContentTypeMap[type];
     }
 
@@ -661,12 +661,6 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
         ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>
         : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>> {
         const h = request.options.fetchOptions.headers;
-
-        console.log(request.fullUrl, {
-            ...omit(request.options.fetchOptions, ["headers"]),
-            ...(h ? { headers: h } : {}),
-            signal,
-        });
 
         const response = await this._dependencies.fetch(request.fullUrl, {
             ...omit(request.options.fetchOptions, ["headers"]),
