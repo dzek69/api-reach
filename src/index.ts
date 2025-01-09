@@ -770,4 +770,5 @@ export type {
     ExpectedResponseBodyType,
     ApiEndpoints,
     ValidateApiEndpoints,
+    RequestBodyType,
 };
