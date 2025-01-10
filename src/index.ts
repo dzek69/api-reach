@@ -42,7 +42,7 @@ import {
     UnknownError,
 } from "./errors.js";
 import { ApiRequest } from "./request/request.js";
-import {getFetch} from "./utils";
+import { getFetch } from "./utils";
 
 const defaultOptions: Pick<
 Required<Options<ExpectedResponseBodyType, any>>, // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -754,6 +754,14 @@ const createApiClient = <
 export {
     createApiClient,
     ResponseDataTypeMismatchError,
+    RequestBodyType,
+    ExpectedResponseBodyType,
+};
+
+export type {
+    ApiClient,
+    ApiEndpoints,
+    ValidateApiEndpoints,
 };
 
 export {
@@ -765,10 +773,3 @@ export {
     ServerErrorResponse,
 } from "./response/response.js";
 
-export type {
-    ApiClient,
-    ExpectedResponseBodyType,
-    ApiEndpoints,
-    ValidateApiEndpoints,
-    RequestBodyType,
-};
