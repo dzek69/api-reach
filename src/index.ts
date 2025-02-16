@@ -42,7 +42,7 @@ import {
     UnknownError,
 } from "./errors.js";
 import { ApiRequest } from "./request/request.js";
-import { getFetch } from "./utils";
+import { getFetch, headersToObject } from "./utils";
 
 const defaultOptions: Pick<
 Required<Options<ExpectedResponseBodyType, any>>, // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -681,8 +681,7 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
             bodyData: bodyData,
             status: response.status,
             statusText: response.statusText,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument,@typescript-eslint/no-explicit-any
-            headers: Object.fromEntries((response.headers as Headers & { entries: () => any }).entries()),
+            headers: headersToObject((response.headers as Headers & { entries: () => unknown })),
         });
     }
 
@@ -753,6 +752,7 @@ const createApiClient = <
 
 export {
     createApiClient,
+    headersToObject,
     ResponseDataTypeMismatchError,
     RequestBodyType,
     ExpectedResponseBodyType,
@@ -772,4 +772,3 @@ export {
     ClientErrorResponse,
     ServerErrorResponse,
 } from "./response/response.js";
-

@@ -1,6 +1,6 @@
 {
   "name": "api-reach",
-  "version": "0.14.0-beta.8",
+  "version": "0.14.0-beta.9",
   "repository": "git@github.com:dzek69/api-reach.git",
   "author": "Jacek Nowacki @dzek69 <git-public@dzek.eu>",
   "license": "MIT",
@@ -40,9 +40,11 @@
   "module": "./esm/index.js",
   "type": "module",
   "dependencies": {
-    "@ezez/errors": "^6.0.0",
+    "@ezez/errors": "^6.0.2",
     "@ezez/utils": "^1.8.1",
-    "oop-timers": "^5.0.0",
+    "content-disposition": "^0.5.4",
+    "mime-types": "^2.1.35",
+    "oop-timers": "^5.1.1",
     "qs": "^6.11.0",
     "url-join": "^4.0.1"
   },
@@ -55,7 +57,9 @@
     "@dzek69/eslint-config-import-typescript": "^1.0.1",
     "@dzek69/eslint-config-typescript": "^1.1.1",
     "@knodes/typedoc-plugin-pages": "^0.23.4",
+    "@types/content-disposition": "^0.5.8",
     "@types/jest": "^29.5.5",
+    "@types/mime-types": "^2.1.4",
     "@types/node": "^18.14.1",
     "@types/qs": "^6.9.7",
     "@types/url-join": "^4.0.0",
@@ -73,10 +77,10 @@
     "node-fetch": "^3.3.0",
     "nodemon": "^3.0.1",
     "prettier": "^2.8.8",
+    "resolve-tspaths": "^0.8.15",
     "ts-node": "^10.9.1",
     "typedoc": "^0.23.0",
-    "typescript": "^5.2.2",
-    "resolve-tspaths": "^0.8.15"
+    "typescript": "^5.2.2"
   },
   "peerDependencies": {
     "node-fetch": "*"

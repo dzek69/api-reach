@@ -19,6 +19,7 @@ import {
     ServerErrorResponse,
     SuccessResponse,
 } from "./index.js";
+import { getFileNameFromResponse } from "./exportedUtils";
 
 type ResponsesList = {
     "get": {
@@ -1167,6 +1168,33 @@ describe("api-reach", () => {
             must(response.body.files).eql({
                 a: "hello",
             });
+        });
+    });
+
+    describe("exported utils", () => {
+        it('getFileNameFromResponse should extract file name from content disposition', async () => {
+            registerMock(() => (req, res) => {
+                res.header("Content-Disposition", `attachment; filename="EURO rates.txt"; filename*=UTF-8''%e2%82%ac%20rates.txt`);
+                return res.send({ ok: true });
+            });
+
+            const response = await localApi.get("/anything/basic", {}, {
+                responseType: ExpectedResponseBodyType.text,
+            });
+
+            const fn = getFileNameFromResponse(response);
+            must(fn).equal("€ rates.txt");
+        });
+
+        it('getFileNameFromResponse should extract file name from url if no content disposition', async () => {
+            registerMock(() => (req, res) => res.send({ok: true}));
+
+            const response = await localApi.get("/anything/basic", {}, {
+                responseType: ExpectedResponseBodyType.text,
+            });
+
+            const fn = getFileNameFromResponse(response);
+            must(fn).equal("basic");
         });
     })
 });

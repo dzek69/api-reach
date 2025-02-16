@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 
+import type { GenericHeaders } from "./types";
+
 import { ResponseStatusGroup } from "./const.js";
 
 // Note: 0, 499 and
@@ -28,7 +30,7 @@ const typesCount = checkOrder.length;
 
 /**
  * Matches HTTP status code to the type group
- * @param {number} status - HTTP status code
+ * @param status - HTTP status code
  */
 const matchStatus = (status: number) => {
     for (let i = 0; i < typesCount; i++) {
@@ -67,8 +69,24 @@ const getFetch = () => {
     return null;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type MiniHeaders = { entries: () => any };
+
+/**
+ * Converts fetch headers to an object
+ *
+ * @param headers - An instance of `Headers`
+ * @returns A plain object where each key represents a header name and its value corresponds to the associated header
+ * value.
+ */
+const headersToObject = (headers: MiniHeaders): NonNullable<GenericHeaders> => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    return Object.fromEntries(headers.entries());
+};
+
 export {
     matchStatus,
     stripHash,
     getFetch,
+    headersToObject,
 };
