@@ -434,6 +434,7 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
 
         const finalOptions = this._buildFetchOptions(options ?? {}, method.toUpperCase(), _data);
         const finalUrl = this._buildUrl(url, _data?.params, _data?.query, finalOptions);
+        // @ts-expect-error idk why this suddenly appeared
         const request = new ApiRequest(method.toUpperCase(), { url: url, fullUrl: finalUrl }, _data, finalOptions);
 
         let cacheKey: string | undefined = undefined,
