@@ -754,9 +754,18 @@ const createApiClient = <
 export {
     createApiClient,
     headersToObject,
-    ResponseDataTypeMismatchError,
     RequestBodyType,
     ExpectedResponseBodyType,
+
+    AbortError,
+    ApiReachError,
+    CacheMissError,
+    HttpClientError,
+    HttpError,
+    HttpServerError,
+    ResponseDataTypeMismatchError,
+    TimeoutError,
+    UnknownError,
 };
 
 export type {
