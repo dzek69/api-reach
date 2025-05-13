@@ -385,6 +385,69 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
         return this.request("POST", url, data, options) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     }
 
+    public patch<
+        U extends keyof Endp["patch"] & string,
+        P extends ParamsType<Endp["patch"][U]>,
+        B extends BodyType<Endp["patch"][U]>,
+        BT extends BodyTypeType<Endp["patch"][U]>,
+        Q extends QueryType<Endp["patch"][U]>,
+        H extends HeadersType<Endp["patch"][U]>,
+        D extends RequestData<P, B, BT, Q, H>,
+        RB extends Endp["patch"][U]["response"],
+        RT extends ExpectedResponseBodyType = T,
+    >(
+        url: U, data: D, options?: RequestOptions<RT, H>,
+    ): AbortablePromise<RT extends ExpectedResponseBodyType.json
+            ? ApiResponse<"patch", U, P, B, BT, Q, H, RB, RT> :
+            RT extends ExpectedResponseBodyType.stream ?
+                ApiResponse<"patch", U, P, B, BT, Q, H, ReadableStream, RT>
+                : ApiResponse<"patch", U, P, B, BT, Q, H, string, RT>> {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return,max-len
+        return this.request("PATCH", url, data, options) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    }
+
+    public put<
+        U extends keyof Endp["put"] & string,
+        P extends ParamsType<Endp["put"][U]>,
+        B extends BodyType<Endp["put"][U]>,
+        BT extends BodyTypeType<Endp["put"][U]>,
+        Q extends QueryType<Endp["put"][U]>,
+        H extends HeadersType<Endp["put"][U]>,
+        D extends RequestData<P, B, BT, Q, H>,
+        RB extends Endp["put"][U]["response"],
+        RT extends ExpectedResponseBodyType = T,
+    >(
+        url: U, data: D, options?: RequestOptions<RT, H>,
+    ): AbortablePromise<RT extends ExpectedResponseBodyType.json
+            ? ApiResponse<"put", U, P, B, BT, Q, H, RB, RT> :
+            RT extends ExpectedResponseBodyType.stream ?
+                ApiResponse<"put", U, P, B, BT, Q, H, ReadableStream, RT>
+                : ApiResponse<"put", U, P, B, BT, Q, H, string, RT>> {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        return this.request("PUT", url, data, options) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    }
+
+    public delete<
+        U extends keyof Endp["delete"] & string,
+        P extends ParamsType<Endp["delete"][U]>,
+        B extends BodyType<Endp["delete"][U]>,
+        BT extends BodyTypeType<Endp["delete"][U]>,
+        Q extends QueryType<Endp["delete"][U]>,
+        H extends HeadersType<Endp["delete"][U]>,
+        D extends RequestData<P, B, BT, Q, H>,
+        RB extends Endp["delete"][U]["response"],
+        RT extends ExpectedResponseBodyType = T,
+    >(
+        url: U, data: D, options?: RequestOptions<RT, H>,
+    ): AbortablePromise<RT extends ExpectedResponseBodyType.json
+            ? ApiResponse<"delete", U, P, B, BT, Q, H, RB, RT> :
+            RT extends ExpectedResponseBodyType.stream ?
+                ApiResponse<"delete", U, P, B, BT, Q, H, ReadableStream, RT>
+                : ApiResponse<"delete", U, P, B, BT, Q, H, string, RT>> {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        return this.request("DELETE", url, data, options) as any; // eslint-disable-line @typescript-eslint/no-explicit-any,max-len
+    }
+
     public request<
         Mthd extends string,
         U extends keyof Endp[Lowercase<Mthd>] & string,
