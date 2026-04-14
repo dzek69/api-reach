@@ -9,3 +9,6 @@
 *.tsbuildinfo
 
 *.itest.*
+
+/CLAUDE.md
+/MISSING.md

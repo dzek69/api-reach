@@ -67,6 +67,12 @@ class ApiResponse<
     }
 }
 
+type GenericApiResponse = ApiResponse<
+string, string, GenericParams, GenericBody, RequestBodyType | undefined, GenericQuery,
+GenericHeaders, GenericJSONResponse | string | ReadableStream<Uint8Array> | undefined,
+ExpectedResponseBodyType
+>;
+
 class AbortedResponse<
     Mthd extends string, U extends string,
     P extends GenericParams, B extends GenericBody,
@@ -140,6 +146,10 @@ const createResponse = <
     }
 
     return new AbortedResponse(data, cached);
+};
+
+export type {
+    GenericApiResponse,
 };
 
 export {

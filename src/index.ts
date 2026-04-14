@@ -5,7 +5,7 @@ import { Timeout } from "oop-timers";
 import { noop, omit, pick, replace, wait } from "@ezez/utils";
 
 import type { AbortErrorDetails } from "./errors";
-import type { ApiResponse } from "./response/response.js";
+import type { ApiResponse, GenericApiResponse } from "./response/response.js";
 import type {
     AbortablePromise,
     ApiEndpoints,
@@ -61,10 +61,14 @@ Required<Options<ExpectedResponseBodyType, any>>, // eslint-disable-line @typesc
     },
 };
 
+type OnResponseCallback = (response: GenericApiResponse) => void;
+
 class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
     private readonly _options: Options<T, GenericHeaders>;
 
     private readonly _dependencies: Dependencies;
+
+    private _onResponseCallbacks: OnResponseCallback[] = [];
 
     public constructor(options?: Options<T, GenericHeaders>, dependencies?: Partial<Dependencies>) {
         this._options = options ?? {};
@@ -82,6 +86,32 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
         if (!this._dependencies.fetch) {
             throw new TypeError("No fetch implementation found, please provide fetch function in dependencies");
         }
+    }
+
+    /**
+     * Registers a callback that will be called for every response, including error responses (4xx, 5xx).
+     * The callback is invoked asynchronously (via setTimeout) so it does not block the response flow.
+     * Useful for global side effects like redirecting to login on 401.
+     *
+     * @returns A function that removes this callback when called.
+     */
+    public onResponse(callback: OnResponseCallback): () => void {
+        this._onResponseCallbacks.push(callback);
+        return () => {
+            this._onResponseCallbacks = this._onResponseCallbacks.filter(cb => cb !== callback);
+        };
+    }
+
+    private _notifyResponseCallbacks(response: GenericApiResponse): void {
+        if (this._onResponseCallbacks.length === 0) {
+            return;
+        }
+        setTimeout(() => {
+            for (const cb of this._onResponseCallbacks) {
+                // eslint-disable-next-line callback-return
+                cb(response);
+            }
+        });
     }
 
     /**
@@ -789,6 +819,8 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
             headers: response.headers,
         }, cached);
 
+        this._notifyResponseCallbacks(finalResult);
+
         if (typeMismatch) {
             throw new ResponseDataTypeMismatchError("Server returned data in unexpected format", {
                 response: finalResult,
@@ -835,6 +867,7 @@ export type {
     ApiClient,
     ApiEndpoints,
     ValidateApiEndpoints,
+    OnResponseCallback,
 };
 
 export {
