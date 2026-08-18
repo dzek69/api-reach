@@ -1,7 +1,7 @@
-import type { ApiRequest } from "../request/request";
 import type { ExpectedResponseBodyType, RequestBodyType } from "../const";
-import type { GenericBody, GenericHeaders, GenericParams, GenericQuery, GenericJSONResponse } from "./common";
+import type { ApiRequest } from "../request/request";
 import type { ApiResponse } from "../response/response";
+import type { GenericBody, GenericHeaders, GenericJSONResponse, GenericParams, GenericQuery } from "./common";
 
 interface CacheInterface {
     get: (key: string) => Promise<string | undefined>;
@@ -17,11 +17,11 @@ type CacheGetKey = <
     H extends GenericHeaders, RT extends ExpectedResponseBodyType,
 >(
     request: Pick<
-    ApiRequest<Mthd, U, P, B, BT, Q, H, RT>,
+        ApiRequest<Mthd, U, P, B, BT, Q, H, RT>,
     "method" | "url" | "fullUrl" | "body" | "headers" | "params" | "query" | "bodyType"
     > & {
         options: Pick<
-        ApiRequest<Mthd, U, P, B, BT, Q, H, RT>["options"],
+            ApiRequest<Mthd, U, P, B, BT, Q, H, RT>["options"],
         "responseType" | "base" | "fetchOptions"
         >;
     }

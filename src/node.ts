@@ -1,6 +1,5 @@
-import stream from "stream";
-
 import { Timeout } from "oop-timers";
+import stream from "stream";
 
 import type { ApiClient } from "./index";
 
@@ -29,7 +28,7 @@ let x = 0;
  * @param [options] - options that will override defaults and options specified in the constructor
  * @returns
  */
-const download = async <Client extends ApiClient<ExpectedResponseBodyType.stream, any>>( // eslint-disable-line max-lines-per-function,max-len,@typescript-eslint/no-explicit-any
+const download = async <Client extends ApiClient<ExpectedResponseBodyType.stream, any>>( // eslint-disable-line max-lines-per-function,@typescript-eslint/no-explicit-any
     writableStream: stream.Writable,
     api: Client,
     method: string,
@@ -63,7 +62,7 @@ const download = async <Client extends ApiClient<ExpectedResponseBodyType.stream
             finished = true;
             resolve(value);
         };
-        const safeReject: typeof reject = (value) => {
+        const safeReject = (value: Error) => {
             // eslint-disable-next-line no-console
             console.log(id, "rejecting");
             if (finished) {

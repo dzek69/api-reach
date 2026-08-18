@@ -1,9 +1,9 @@
-import type { RequestRedirect as NodeFetchRequestRedirect } from "node-fetch";
 import type { ExpectedResponseBodyType } from "../const";
-import type { GenericHeaders } from "./common";
 import type {
-    CacheGetKey, CacheGetTTL, CacheInterface, CacheShouldCacheResponse, CacheSaveStrategy, CacheLoadStrategy,
+    CacheGetKey, CacheGetTTL, CacheInterface, CacheLoadStrategy,
+    CacheSaveStrategy, CacheShouldCacheResponse,
 } from "./cache";
+import type { GenericHeaders } from "./common";
 
 interface RetryInfo {
     tryNo: number;
@@ -46,6 +46,8 @@ interface CacheOptions {
      */
     shouldCacheResponse: CacheShouldCacheResponse | boolean;
 }
+
+type NodeFetchRequestRedirect = "error" | "follow" | "manual";
 
 /**
  * Base options, used then creating a new instance of `ApiClient`.

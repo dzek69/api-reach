@@ -1,6 +1,6 @@
+import type { ExpectedResponseBodyType, RequestBodyType } from "../const";
 import type { ApiRequest } from "../request/request";
 import type { GenericBody, GenericHeaders, GenericJSONResponse, GenericParams, GenericQuery } from "../types";
-import type { ExpectedResponseBodyType, RequestBodyType } from "../const";
 
 import { ResponseStatusGroup } from "../const.js";
 import { matchStatus } from "../utils.js";
@@ -68,9 +68,9 @@ class ApiResponse<
 }
 
 type GenericApiResponse = ApiResponse<
-string, string, GenericParams, GenericBody, RequestBodyType | undefined, GenericQuery,
-GenericHeaders, GenericJSONResponse | string | ReadableStream<Uint8Array> | undefined,
-ExpectedResponseBodyType
+    string, string, GenericParams, GenericBody, RequestBodyType | undefined, GenericQuery,
+    GenericHeaders, GenericJSONResponse | string | ReadableStream<Uint8Array> | undefined,
+    ExpectedResponseBodyType
 >;
 
 class AbortedResponse<

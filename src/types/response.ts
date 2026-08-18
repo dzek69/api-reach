@@ -1,10 +1,10 @@
-import type { ApiResponse } from "../response/response";
 import type { ExpectedResponseBodyType, RequestBodyType } from "../const";
+import type { ApiResponse } from "../response/response";
 import type { GenericBody, GenericHeaders, GenericJSONResponse, GenericParams, GenericQuery } from "./common";
 
 type AR = ApiResponse<
-"", "", GenericParams, GenericBody, RequestBodyType, GenericQuery,
-GenericHeaders, GenericJSONResponse | string, ExpectedResponseBodyType
+    "", "", GenericParams, GenericBody, RequestBodyType, GenericQuery,
+    GenericHeaders, GenericJSONResponse | string, ExpectedResponseBodyType
 >;
 
 interface CachedData {

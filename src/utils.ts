@@ -60,7 +60,6 @@ const stripHash = (str: string) => {
 
 const getFetch = () => {
     if (typeof window !== "undefined") {
-        // eslint-disable-next-line no-undef
         return window.fetch.bind(window);
     }
     if (typeof fetch !== "undefined") {

@@ -1,0 +1,6 @@
+allowBuilds:
+  unrs-resolver: true
+
+# @ezez/eslint pins ts-deepmerge ^7, which has a prototype-pollution advisory (GHSA-87mf-gv2c-c62c)
+overrides:
+  "ts-deepmerge@7": "^8.0.0"

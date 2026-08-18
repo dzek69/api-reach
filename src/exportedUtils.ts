@@ -1,10 +1,10 @@
 import { parse } from "content-disposition";
 import { extension } from "mime-types";
 
-import type { ApiRequest } from "./request/request";
-import type { GenericBody, GenericHeaders, GenericJSONResponse, GenericParams, GenericQuery } from "./types";
 import type { ExpectedResponseBodyType, RequestBodyType } from "./const";
+import type { ApiRequest } from "./request/request";
 import type { ApiResponse } from "./response/response";
+import type { GenericBody, GenericHeaders, GenericJSONResponse, GenericParams, GenericQuery } from "./types";
 
 /**
  * Extracts the file name from a given URL.

@@ -10,9 +10,15 @@
 /nodemon.json
 /.editorconfig
 /tsconfig.*
-/.eslintrc.json
 /old
 
 *.itest.*
 
 /pagesconfig.json
+
+/eslint.config.mjs
+/typedoc.mjs
+/.prettierignore
+/.prettierrc.json
+/.husky
+/pnpm-workspace.yaml

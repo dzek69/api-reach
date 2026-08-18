@@ -1,8 +1,8 @@
 /* eslint-disable max-lines */
-import urlJoin from "url-join";
-import qs from "qs";
-import { Timeout } from "oop-timers";
 import { noop, omit, pick, replace, wait } from "@ezez/utils";
+import { Timeout } from "oop-timers";
+import qs from "qs";
+import urlJoin from "url-join";
 
 import type { AbortErrorDetails } from "./errors";
 import type { ApiResponse, GenericApiResponse } from "./response/response.js";
@@ -28,7 +28,6 @@ import type {
     ValidateApiEndpoints,
 } from "./types";
 
-import { ClientErrorResponse, createResponse, ServerErrorResponse } from "./response/response.js";
 import { ExpectedResponseBodyType, RequestBodyType, requestContentTypeMap } from "./const.js";
 import {
     AbortError,
@@ -42,12 +41,13 @@ import {
     UnknownError,
 } from "./errors.js";
 import { ApiRequest } from "./request/request.js";
+import { ClientErrorResponse, createResponse, ServerErrorResponse } from "./response/response.js";
 import { getFetch, headersToObject } from "./utils";
 
 const defaultOptions: Pick<
-Required<Options<ExpectedResponseBodyType, any>>, // eslint-disable-line @typescript-eslint/no-explicit-any
+    Required<Options<ExpectedResponseBodyType, any>>, // eslint-disable-line @typescript-eslint/no-explicit-any
 "responseType" | "timeout" | "retry" | "throw"
-> & { cache: Partial<Options<ExpectedResponseBodyType, any>["cache"]> } = { // eslint-disable-line @typescript-eslint/no-explicit-any,max-len
+> & { cache: Partial<Options<ExpectedResponseBodyType, any>["cache"]> } = { // eslint-disable-line @typescript-eslint/no-explicit-any
     responseType: ExpectedResponseBodyType.json,
     timeout: 30000,
     retry: 0,
@@ -75,10 +75,10 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
         this._dependencies = {
             // TODO this will crash on envs without these, fix by creating a function that "fills missing"
             fetch: getFetch() as typeof fetch,
-            URL: URL,
-            FormData: FormData,
+            URL,
+            FormData,
             qsStringify: qs.stringify,
-            AbortController: AbortController,
+            AbortController,
             ...dependencies,
         };
 
@@ -329,7 +329,7 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
                 // No full URL can be constructed on server side
                 throw new ApiReachError(
                     `No base url given and url ${url} is not absolute. This is valid in browsers but `
-                    + `invalid on server.`,
+                    + "invalid on server.",
                 );
             }
 
@@ -385,11 +385,11 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
         url: U, data: D, options?: RequestOptions<RT, H>,
     ): AbortablePromise<
         RT extends ExpectedResponseBodyType.json
-            ? ApiResponse<"get", U, P, B, BT, Q, H, RB, RT> :
-            RT extends ExpectedResponseBodyType.stream ?
-                ApiResponse<"get", U, P, B, BT, Q, H, ReadableStream, RT>
+            ? ApiResponse<"get", U, P, B, BT, Q, H, RB, RT>
+            : RT extends ExpectedResponseBodyType.stream
+                ? ApiResponse<"get", U, P, B, BT, Q, H, ReadableStream, RT>
                 : ApiResponse<"get", U, P, B, BT, Q, H, string, RT>
-        > {
+    > {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return this.request("GET", url, data, options) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     }
@@ -407,11 +407,11 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
     >(
         url: U, data: D, options?: RequestOptions<RT, H>,
     ): AbortablePromise<RT extends ExpectedResponseBodyType.json
-            ? ApiResponse<"post", U, P, B, BT, Q, H, RB, RT> :
-            RT extends ExpectedResponseBodyType.stream ?
-                ApiResponse<"post", U, P, B, BT, Q, H, ReadableStream, RT>
-                : ApiResponse<"post", U, P, B, BT, Q, H, string, RT>> {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return,max-len
+        ? ApiResponse<"post", U, P, B, BT, Q, H, RB, RT>
+        : RT extends ExpectedResponseBodyType.stream
+            ? ApiResponse<"post", U, P, B, BT, Q, H, ReadableStream, RT>
+            : ApiResponse<"post", U, P, B, BT, Q, H, string, RT>> {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return this.request("POST", url, data, options) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     }
 
@@ -428,11 +428,11 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
     >(
         url: U, data: D, options?: RequestOptions<RT, H>,
     ): AbortablePromise<RT extends ExpectedResponseBodyType.json
-            ? ApiResponse<"patch", U, P, B, BT, Q, H, RB, RT> :
-            RT extends ExpectedResponseBodyType.stream ?
-                ApiResponse<"patch", U, P, B, BT, Q, H, ReadableStream, RT>
-                : ApiResponse<"patch", U, P, B, BT, Q, H, string, RT>> {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return,max-len
+        ? ApiResponse<"patch", U, P, B, BT, Q, H, RB, RT>
+        : RT extends ExpectedResponseBodyType.stream
+            ? ApiResponse<"patch", U, P, B, BT, Q, H, ReadableStream, RT>
+            : ApiResponse<"patch", U, P, B, BT, Q, H, string, RT>> {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return this.request("PATCH", url, data, options) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     }
 
@@ -449,10 +449,10 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
     >(
         url: U, data: D, options?: RequestOptions<RT, H>,
     ): AbortablePromise<RT extends ExpectedResponseBodyType.json
-            ? ApiResponse<"put", U, P, B, BT, Q, H, RB, RT> :
-            RT extends ExpectedResponseBodyType.stream ?
-                ApiResponse<"put", U, P, B, BT, Q, H, ReadableStream, RT>
-                : ApiResponse<"put", U, P, B, BT, Q, H, string, RT>> {
+        ? ApiResponse<"put", U, P, B, BT, Q, H, RB, RT>
+        : RT extends ExpectedResponseBodyType.stream
+            ? ApiResponse<"put", U, P, B, BT, Q, H, ReadableStream, RT>
+            : ApiResponse<"put", U, P, B, BT, Q, H, string, RT>> {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return this.request("PUT", url, data, options) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     }
@@ -470,12 +470,12 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
     >(
         url: U, data: D, options?: RequestOptions<RT, H>,
     ): AbortablePromise<RT extends ExpectedResponseBodyType.json
-            ? ApiResponse<"delete", U, P, B, BT, Q, H, RB, RT> :
-            RT extends ExpectedResponseBodyType.stream ?
-                ApiResponse<"delete", U, P, B, BT, Q, H, ReadableStream, RT>
-                : ApiResponse<"delete", U, P, B, BT, Q, H, string, RT>> {
+        ? ApiResponse<"delete", U, P, B, BT, Q, H, RB, RT>
+        : RT extends ExpectedResponseBodyType.stream
+            ? ApiResponse<"delete", U, P, B, BT, Q, H, ReadableStream, RT>
+            : ApiResponse<"delete", U, P, B, BT, Q, H, string, RT>> {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return this.request("DELETE", url, data, options) as any; // eslint-disable-line @typescript-eslint/no-explicit-any,max-len
+        return this.request("DELETE", url, data, options) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     }
 
     public request<
@@ -492,10 +492,10 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
     >(
         method: Mthd, url: U, data: D, options?: RequestOptions<RT, H>,
     ): AbortablePromise<RT extends ExpectedResponseBodyType.json
-            ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT> :
-            RT extends ExpectedResponseBodyType.stream ?
-                ApiResponse<Mthd, U, P, B, BT, Q, H, ReadableStream, RT>
-                : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>> {
+        ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>
+        : RT extends ExpectedResponseBodyType.stream
+            ? ApiResponse<Mthd, U, P, B, BT, Q, H, ReadableStream, RT>
+            : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>> {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return,@typescript-eslint/no-explicit-any
         return this._prepareAndSendRequest(method, url, data, options) as any;
     }
@@ -515,8 +515,8 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
     >(
         method: Mthd, url: U, data: D, options?: RequestOptions<RT, H>,
     ): AbortablePromise<RT extends ExpectedResponseBodyType.json
-            ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>
-            : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>> {
+        ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>
+        : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>> {
         // ------------
 
         type ApiReturnType = RT extends ExpectedResponseBodyType.json
@@ -528,7 +528,7 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
         const finalOptions = this._buildFetchOptions(options ?? {}, method.toUpperCase(), _data);
         const finalUrl = this._buildUrl(url, _data?.params, _data?.query, finalOptions);
         // @ts-expect-error idk why this suddenly appeared
-        const request = new ApiRequest(method.toUpperCase(), { url: url, fullUrl: finalUrl }, _data, finalOptions);
+        const request = new ApiRequest(method.toUpperCase(), { url, fullUrl: finalUrl }, _data, finalOptions);
 
         let cacheKey: string | undefined = undefined,
             currentController: AbortController | undefined = undefined,
@@ -612,7 +612,7 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
                             const errorDetails: AbortErrorDetails = {
                                 while: "waiting",
                                 tries: tryNo - 1,
-                                request: request,
+                                request,
                             };
 
                             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -635,7 +635,7 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
                             const errorDetails: AbortErrorDetails = {
                                 while: "connection",
                                 tries: tryNo,
-                                request: request,
+                                request,
                             };
 
                             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -772,7 +772,7 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
         const bodyData = streamWanted ? (response.body ?? undefined) : (await response.text());
 
         return this._buildResponse(request, {
-            bodyData: bodyData,
+            bodyData,
             status: response.status,
             statusText: response.statusText,
             headers: headersToObject((response.headers as Headers & { entries: () => unknown })),
@@ -797,8 +797,8 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
         statusText: string;
         headers: GenericHeaders;
     }, cached = false): Promise<RT extends ExpectedResponseBodyType.json
-            ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>
-            : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>> {
+        ? ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>
+        : ApiResponse<Mthd, U, P, B, BT, Q, H, string, RT>> {
         let jsonData: RB | undefined;
 
         const jsonWanted = request.options.responseType === ExpectedResponseBodyType.json;
@@ -814,7 +814,7 @@ class ApiClient<T extends ExpectedResponseBodyType, Endp extends ApiEndpoints> {
         const finalResult = createResponse({
             status: response.status,
             statusText: response.statusText,
-            request: request,
+            request,
             body: jsonData ?? response.bodyData,
             headers: response.headers,
         }, cached);

@@ -2,10 +2,12 @@
 
 import { createError } from "@ezez/errors";
 
-import type { GenericBody, GenericHeaders, GenericJSONResponse, GenericParams, GenericQuery } from "./types";
 import type { ExpectedResponseBodyType, RequestBodyType } from "./const";
-import type { ApiResponse } from "./response/response";
 import type { ApiRequest } from "./request/request";
+import type { ApiResponse } from "./response/response";
+import type { GenericBody, GenericHeaders, GenericJSONResponse, GenericParams, GenericQuery } from "./types";
+
+type GenericResponseBody = GenericJSONResponse | string | ReadableStream<Uint8Array> | undefined;
 
 type BasicErrorDetails<
     Mthd extends string = string, U extends string = string,
@@ -13,7 +15,7 @@ type BasicErrorDetails<
     BT extends RequestBodyType | undefined = RequestBodyType | undefined,
     Q extends GenericQuery = GenericQuery,
     H extends GenericHeaders = GenericHeaders,
-    RB extends GenericJSONResponse | string | ReadableStream<Uint8Array> | undefined = GenericJSONResponse | string | ReadableStream<Uint8Array> | undefined, // eslint-disable-line max-len
+    RB extends GenericResponseBody = GenericResponseBody,
     RT extends ExpectedResponseBodyType = ExpectedResponseBodyType,
 > = {
     response: ApiResponse<Mthd, U, P, B, BT, Q, H, RB, RT>;

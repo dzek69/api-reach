@@ -1,5 +1,5 @@
+import type { ExpectedResponseBodyType, RequestBodyType } from "../const";
 import type { FinalOptions, GenericBody, GenericHeaders, GenericParams, GenericQuery, RequestData } from "../types";
-import type { RequestBodyType, ExpectedResponseBodyType } from "../const";
 
 class ApiRequest<
     Mthd extends string, U extends string,

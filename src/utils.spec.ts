@@ -1,5 +1,5 @@
-import { matchStatus, stripHash } from "./utils.js";
 import { ResponseStatusGroup } from "./const.js";
+import { matchStatus, stripHash } from "./utils.js";
 
 describe("utils", () => {
     describe("matchStatus", () => {

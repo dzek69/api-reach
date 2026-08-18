@@ -1,14 +1,14 @@
-import fastify from "fastify";
 import { noop, wait } from "@ezez/utils";
-import must from "must";
+import fastify from "fastify";
 import Keyv from "keyv";
+import must from "must";
 
-import type { CacheInterface } from "./types/cache";
 import type { RequestOptions } from "./types";
+import type { CacheInterface } from "./types/cache";
 
-import { AbortError, CacheMissError, HttpClientError, HttpError, HttpServerError, TimeoutError } from "./errors.js";
 import { ExpectedResponseBodyType } from "./const.js";
-
+import { AbortError, CacheMissError, HttpClientError, HttpError, HttpServerError, TimeoutError } from "./errors.js";
+import { getFileNameFromResponse } from "./exportedUtils";
 import {
     AbortedResponse,
     ClientErrorResponse,
@@ -19,10 +19,9 @@ import {
     ServerErrorResponse,
     SuccessResponse,
 } from "./index.js";
-import { getFileNameFromResponse } from "./exportedUtils";
 
 type ResponsesList = {
-    "get": {
+    get: {
         "/anything/basic": {
             response: {
                 status: "ok";
@@ -55,7 +54,7 @@ type ResponsesList = {
             };
         };
     };
-    "post": {
+    post: {
         "/anything/advanced": {
             response: any;
             body: {
@@ -73,6 +72,12 @@ type ResponsesList = {
 
 describe("api-reach", () => {
     const server = fastify();
+    // fastify 5 only enables the standard methods by default, the rest must be added explicitly
+    (["SEARCH", "TRACE", "PROPFIND", "PROPPATCH", "MKCOL", "COPY", "MOVE", "LOCK", "UNLOCK"] as const).forEach(
+        (method) => {
+            server.addHttpMethod(method, { hasBody: true });
+        },
+    );
     server.route({
         method: [
             "DELETE", "GET", "HEAD", "PATCH", "POST", "PUT", "OPTIONS", "SEARCH", "TRACE", "PROPFIND", "PROPPATCH",
@@ -146,13 +151,15 @@ describe("api-reach", () => {
     it("TS", async () => {
         registerMock((req, res) => {
             if (req.method === "GET" && req.url === "/anything/advanced") {
-                return (req, res) => {
-                    res.send({ status: "ok" });
+                return (_, res_) => {
+                    res_.send({ status: "ok" });
                 };
             }
             return null;
         });
         const response = await localApi.get("/anything/advanced");
+        // this endpoint is declared with `response: any` on purpose
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const body = response.body;
         must(body.status).equal("ok");
     });
@@ -245,27 +252,28 @@ describe("api-reach", () => {
         });
 
         it("for aborted response", async () => {
-            registerMock(() => async (req, res) => res.code(404).send({}));
-
+            // no mock is registered on purpose - aborting right away means the request never leaves the client,
+            // so the server must not be hit at all
             const request = localApi.get("/");
             request.abort();
             await request.then(() => {
                 throw new Error("Expected error to be thrown");
             }, (e: unknown) => {
+                const err = e as AbortError;
                 must(e).be.instanceof(AbortError);
-                must(e.message).equal("Request to http://127.0.0.1:9192/ aborted");
-                must(e.details.while).equal("connection");
-                must(e.details.tries).equal(1);
+                must(err.message).equal("Request to http://127.0.0.1:9192/ aborted");
+                must(err.details.while).equal("connection");
+                must(err.details.tries).equal(1);
             });
 
+            // give a stray request a chance to reach the server, so it blows up here and not in the next test
             await wait(100);
-            // wait to let the mock run in case it was not called, because abort happened
         });
 
         it("throws proper error by default on 4xx", async () => {
             registerMock((req) => {
                 if (req.url === "/404") {
-                    return async (req, res) => res.code(404).send({});
+                    return async (_, res) => res.code(404).send({});
                 }
                 return null;
             });
@@ -278,7 +286,8 @@ describe("api-reach", () => {
                 must(e).be.instanceof(HttpClientError);
                 e.message.must.equal("Not Found");
 
-                const response = e.details.response;
+                const err = e as HttpClientError;
+                const response = err.details.response;
                 response.must.not.be.instanceof(InformationalResponse);
                 response.must.not.be.instanceof(SuccessResponse);
                 response.must.not.be.instanceof(RedirectResponse);
@@ -305,7 +314,8 @@ describe("api-reach", () => {
                 must(e).be.instanceof(HttpServerError);
                 e.message.must.equal("Internal Server Error");
 
-                const response = e.details.response;
+                const err = e as HttpServerError;
+                const response = err.details.response;
                 response.must.not.be.instanceof(InformationalResponse);
                 response.must.not.be.instanceof(SuccessResponse);
                 response.must.not.be.instanceof(RedirectResponse);
@@ -419,7 +429,7 @@ describe("api-reach", () => {
             });
             await req.then(() => {
                 throw new Error("Expected error to be thrown");
-            }, (e) => {
+            }, (e: unknown) => {
                 must(e).be.instanceof(HttpClientError);
                 e.message.must.equal("Bad Request");
             });
@@ -595,23 +605,39 @@ describe("api-reach", () => {
 
     describe("supports timeouts", () => {
         it("should support single try timeout", async () => {
-            registerMock(() => (req, res) => setTimeout(() => res.send({}), 400));
+            registerMock(() => (_, res) => {
+                setTimeout(() => {
+                    res.send({});
+                }, 400);
+            });
 
             const req = localApi.get("/anything/basic", undefined, {
                 timeout: 300,
             });
             await req.then(() => {
                 throw new Error("Expected error to be thrown");
-            }, (e) => {
+            }, (e: unknown) => {
                 must(e).be.instanceof(TimeoutError);
                 e.message.must.equal("Request to http://127.0.0.1:9192/anything/basic timed out");
             });
         });
 
         it("should support multiple tries timeout", async () => {
-            registerMock(() => (req, res) => setTimeout(() => res.send({}), 400));
-            registerMock(() => (req, res) => setTimeout(() => res.send({}), 400));
-            registerMock(() => (req, res) => setTimeout(() => res.send({ ok: true }), 100));
+            registerMock(() => (_, res) => {
+                setTimeout(() => {
+                    res.send({});
+                }, 400);
+            });
+            registerMock(() => (_, res) => {
+                setTimeout(() => {
+                    res.send({});
+                }, 400);
+            });
+            registerMock(() => (_, res) => {
+                setTimeout(() => {
+                    res.send({ ok: true });
+                }, 100);
+            });
 
             const response = await localApi.get("/anything/basic", undefined, {
                 timeout: 300,
@@ -621,9 +647,21 @@ describe("api-reach", () => {
         });
 
         it("should support global timeout", async () => {
-            registerMock(() => (req, res) => setTimeout(() => res.send({}), 400));
-            registerMock(() => (req, res) => setTimeout(() => res.send({}), 400));
-            registerMock(() => (req, res) => setTimeout(() => res.send({ ok: true }), 100));
+            registerMock(() => (_, res) => {
+                setTimeout(() => {
+                    res.send({});
+                }, 400);
+            });
+            registerMock(() => (_, res) => {
+                setTimeout(() => {
+                    res.send({});
+                }, 400);
+            });
+            registerMock(() => (_, res) => {
+                setTimeout(() => {
+                    res.send({ ok: true });
+                }, 100);
+            });
 
             const request = localApi.get("/anything/basic", undefined, {
                 timeout: {
@@ -635,7 +673,7 @@ describe("api-reach", () => {
 
             await request.then(() => {
                 throw new Error("Expected error to be thrown");
-            }, (e) => {
+            }, (e: unknown) => {
                 must(e).be.instanceof(TimeoutError);
             });
         });
@@ -697,9 +735,9 @@ describe("api-reach", () => {
 
             await request2.then(() => {
                 throw new Error("Expected error to be thrown");
-            }, (e) => {
+            }, (e: unknown) => {
                 must(e).be.instanceof(HttpClientError);
-                const err = e as unknown as HttpClientError;
+                const err = e as HttpClientError;
                 err.details?.response.body.must.eql({ error: "NF" });
             });
         });
@@ -735,7 +773,7 @@ describe("api-reach", () => {
 
             await request2.then(() => {
                 throw new Error("Expected error to be thrown");
-            }, (e) => {
+            }, (e: unknown) => {
                 must(e).be.instanceof(HttpClientError);
             });
         });
@@ -791,7 +829,7 @@ describe("api-reach", () => {
 
                 registerMock((req) => (_, res) => { res.send({ route: req.url }); });
 
-                const keyFn = jest.fn().mockImplementation((req) => req.url);
+                const keyFn = jest.fn().mockImplementation((req: { url: string }) => req.url);
 
                 const cachedApi = createApiClient<ResponsesList>({
                     base: "http://127.0.0.1:9192",
@@ -1152,7 +1190,7 @@ describe("api-reach", () => {
     // TODO throw if hash given for base url
 
     describe("supports FormData", () => {
-        it('should not crash sending form data', async () => {
+        it("should not crash sending form data", async () => {
             const formData = new FormData();
             formData.append("name", "John");
             formData.append("a", new Blob(["hello"]), "hello.txt");
@@ -1172,9 +1210,12 @@ describe("api-reach", () => {
     });
 
     describe("exported utils", () => {
-        it('getFileNameFromResponse should extract file name from content disposition', async () => {
+        it("getFileNameFromResponse should extract file name from content disposition", async () => {
             registerMock(() => (req, res) => {
-                res.header("Content-Disposition", `attachment; filename="EURO rates.txt"; filename*=UTF-8''%e2%82%ac%20rates.txt`);
+                res.header(
+                    "Content-Disposition",
+                    `attachment; filename="EURO rates.txt"; filename*=UTF-8''%e2%82%ac%20rates.txt`,
+                );
                 return res.send({ ok: true });
             });
 
@@ -1186,8 +1227,8 @@ describe("api-reach", () => {
             must(fn).equal("€ rates.txt");
         });
 
-        it('getFileNameFromResponse should extract file name from url if no content disposition', async () => {
-            registerMock(() => (req, res) => res.send({ok: true}));
+        it("getFileNameFromResponse should extract file name from url if no content disposition", async () => {
+            registerMock(() => (req, res) => res.send({ ok: true }));
 
             const response = await localApi.get("/anything/basic", {}, {
                 responseType: ExpectedResponseBodyType.text,
@@ -1196,5 +1237,5 @@ describe("api-reach", () => {
             const fn = getFileNameFromResponse(response);
             must(fn).equal("basic");
         });
-    })
+    });
 });
